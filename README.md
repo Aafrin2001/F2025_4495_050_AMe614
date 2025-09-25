@@ -96,3 +96,4 @@ To run the app in Android Studio:
 - The app uses TypeScript for better type safety
 - Responsive design works on both iOS and Android
 - Modern UI with smooth animations and transitions
+

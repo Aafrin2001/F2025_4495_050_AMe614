@@ -243,4 +243,64 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
         break;
     }
   };
+
+  const renderActivity = (activity: Activity) => (
+    <TouchableOpacity
+      key={activity.id}
+      style={[
+        styles.activityCard,
+        { borderLeftColor: activity.color },
+        activity.completed && styles.completedCard
+      ]}
+      onPress={() => handleActivityPress(activity.id)}
+    >
+      <View style={styles.activityHeader}>
+        <View style={styles.activityIconContainer}>
+          <Ionicons name={activity.icon as any} size={24} color={activity.color} />
+        </View>
+        <View style={styles.activityInfo}>
+          <Text style={[styles.activityName, activity.completed && styles.completedText]}>
+            {activity.name}
+          </Text>
+          <Text style={styles.activityDescription}>{activity.description}</Text>
+          <View style={styles.activityMeta}>
+            <Text style={styles.activityDuration}>{activity.duration} min</Text>
+            <Text style={styles.activityPoints}>{activity.points} pts</Text>
+          </View>
+        </View>
+        <View style={styles.activityStatus}>
+          {activity.completed ? (
+            <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
+          ) : (
+            <Ionicons name="ellipse-outline" size={28} color="rgba(255, 255, 255, 0.5)" />
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderGame = (game: Game) => (
+    <TouchableOpacity
+      key={game.id}
+      style={[styles.gameCard, { borderLeftColor: game.color }]}
+      onPress={() => handleGamePress(game)}
+    >
+      <View style={styles.gameHeader}>
+        <View style={styles.gameIconContainer}>
+          <Ionicons name={game.icon as any} size={24} color={game.color} />
+        </View>
+        <View style={styles.gameInfo}>
+          <Text style={styles.gameName}>{game.name}</Text>
+          <Text style={styles.gameDescription}>{game.description}</Text>
+          <View style={styles.gameMeta}>
+            <Text style={[styles.difficultyBadge, { backgroundColor: game.color }]}>
+              {game.difficulty}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="play-circle-outline" size={24} color={game.color} />
+      </View>
+    </TouchableOpacity>
+  );
+
 }

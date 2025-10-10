@@ -434,3 +434,259 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
   );
 };
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 40,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    padding: 25,
+    marginBottom: 30,
+  },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 20,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+  activitiesList: {
+    gap: 15,
+  },
+  activityCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+  },
+  completedCard: {
+    opacity: 0.7,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activityIconContainer: {
+    marginRight: 15,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  completedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.7,
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 8,
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  activityDuration: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  activityPoints: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  activityStatus: {
+    marginLeft: 10,
+  },
+  gamesList: {
+    gap: 15,
+  },
+  gameCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+  },
+  gameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gameIconContainer: {
+    marginRight: 15,
+  },
+  gameInfo: {
+    flex: 1,
+  },
+  gameName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  gameDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 8,
+  },
+  gameMeta: {
+    flexDirection: 'row',
+  },
+  difficultyBadge: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 20,
+    padding: 30,
+    width: '100%',
+    maxWidth: 350,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  notesInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  saveButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+
+export default ActivitiesScreen;

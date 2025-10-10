@@ -10,7 +10,7 @@ expo/
 .expo-shared/
 
 # Source code (as requested to exclude)
-src/
+
 
 # OS generated files
 .DS_Store

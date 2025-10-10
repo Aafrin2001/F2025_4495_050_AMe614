@@ -303,4 +303,134 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
     </TouchableOpacity>
   );
 
-}
+  return (
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      <StatusBar style="light" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Activities</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Today's Progress</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{activities.filter(a => a.completed).length}</Text>
+              <Text style={styles.statLabel}>Completed</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{totalPoints}</Text>
+              <Text style={styles.statLabel}>Points</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{activities.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Health Activities</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddActivity(true)}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.activitiesList}>
+            {activities.map(renderActivity)}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Brain Games</Text>
+          <Text style={styles.sectionSubtitle}>Keep your mind sharp with these fun games</Text>
+          
+          <View style={styles.gamesList}>
+            {games.map(renderGame)}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Add Activity Modal */}
+      {showAddActivity && (
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showAddActivity}
+          onRequestClose={() => setShowAddActivity(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add New Activity</Text>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Activity Name</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newActivity.name}
+                  onChangeText={(text) => setNewActivity({...newActivity, name: text})}
+                  placeholder="e.g., Evening Stroll"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Description (Optional)</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.notesInput]}
+                  value={newActivity.description}
+                  onChangeText={(text) => setNewActivity({...newActivity, description: text})}
+                  placeholder="Describe the activity..."
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Duration (minutes)</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newActivity.duration}
+                  onChangeText={(text) => setNewActivity({...newActivity, duration: text})}
+                  placeholder="15"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowAddActivity(false)}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={handleAddActivity}
+                >
+                  <Text style={styles.saveButtonText}>Add Activity</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+    </LinearGradient>
+  );
+};
+

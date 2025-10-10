@@ -244,6 +244,9 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
     }
   };
 
+
+
+  
   const renderActivity = (activity: Activity) => (
     <TouchableOpacity
       key={activity.id}
@@ -278,6 +281,15 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
       </View>
     </TouchableOpacity>
   );
+
+
+
+
+
+
+
+
+
 
   const renderGame = (game: Game) => (
     <TouchableOpacity

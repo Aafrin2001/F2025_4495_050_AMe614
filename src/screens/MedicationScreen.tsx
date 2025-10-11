@@ -326,4 +326,270 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack }) => {
         </View>
       </ScrollView>
 
-     
+      {/* Add Medication Modal */}
+      {showAddMedication && (
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showAddMedication}
+          onRequestClose={() => setShowAddMedication(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Add New Medication</Text>
+              
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Medication Name *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMedication.name}
+                  onChangeText={(text) => setNewMedication({...newMedication, name: text})}
+                  placeholder="e.g., Lisinopril"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                />
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.formLabel}>Dosage *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.dosage}
+                    onChangeText={(text) => setNewMedication({...newMedication, dosage: text})}
+                    placeholder="e.g., 10mg"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.formLabel}>Type</Text>
+                  <View style={styles.typeButtons}>
+                    {['Pill', 'Liquid', 'Injection', 'Cream', 'Inhaler'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.typeButton,
+                          newMedication.type === type && styles.typeButtonSelected,
+                          { backgroundColor: newMedication.type === type ? getMedicationTypeColor(type as any) : 'rgba(255, 255, 255, 0.2)' }
+                        ]}
+                        onPress={() => setNewMedication({...newMedication, type: type as any})}
+                      >
+                        <Text style={styles.typeButtonText}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.formLabel}>Frequency *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.frequency}
+                    onChangeText={(text) => setNewMedication({...newMedication, frequency: text})}
+                    placeholder="e.g., Once daily"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.formLabel}>Time</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.time}
+                    onChangeText={(text) => setNewMedication({...newMedication, time: text})}
+                    placeholder="e.g., 08:00 AM"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.formLabel}>Color</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.color}
+                    onChangeText={(text) => setNewMedication({...newMedication, color: text})}
+                    placeholder="e.g., White"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.formLabel}>Shape</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.shape}
+                    onChangeText={(text) => setNewMedication({...newMedication, shape: text})}
+                    placeholder="e.g., Round"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Instructions</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.notesInput]}
+                  value={newMedication.instructions}
+                  onChangeText={(text) => setNewMedication({...newMedication, instructions: text})}
+                  placeholder="e.g., Take with food"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.formLabel}>Doctor</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.doctor}
+                    onChangeText={(text) => setNewMedication({...newMedication, doctor: text})}
+                    placeholder="e.g., Dr. Smith"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+                <View style={[styles.formGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.formLabel}>Pharmacy</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newMedication.pharmacy}
+                    onChangeText={(text) => setNewMedication({...newMedication, pharmacy: text})}
+                    placeholder="e.g., CVS Pharmacy"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Refill Date</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={newMedication.refillDate}
+                  onChangeText={(text) => setNewMedication({...newMedication, refillDate: text})}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Side Effects (comma-separated)</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.notesInput]}
+                  value={newMedication.sideEffects}
+                  onChangeText={(text) => setNewMedication({...newMedication, sideEffects: text})}
+                  placeholder="e.g., Dry cough, Dizziness"
+                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowAddMedication(false)}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={handleAddMedication}
+                >
+                  <Text style={styles.saveButtonText}>Add Medication</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+      )}
+
+      {/* Medication Details Modal */}
+      {showMedicationDetails && selectedMedication && (
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showMedicationDetails}
+          onRequestClose={() => setShowMedicationDetails(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>{selectedMedication.name}</Text>
+              
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Dosage</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.dosage}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Frequency</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.frequency}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Time</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.time}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Type</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.type}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Instructions</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.instructions || 'No specific instructions'}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Doctor</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.doctor || 'Not specified'}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Pharmacy</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.pharmacy || 'Not specified'}</Text>
+              </View>
+
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsLabel}>Refill Date</Text>
+                <Text style={styles.detailsValue}>{selectedMedication.refillDate || 'Not specified'}</Text>
+              </View>
+
+              {selectedMedication.sideEffects.length > 0 && (
+                <View style={styles.detailsSection}>
+                  <Text style={styles.detailsLabel}>Side Effects</Text>
+                  <Text style={styles.detailsValue}>{selectedMedication.sideEffects.join(', ')}</Text>
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={() => {
+                    handleTakeMedication(selectedMedication.id);
+                    setShowMedicationDetails(false);
+                  }}
+                >
+                  <Text style={styles.saveButtonText}>Mark as Taken</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={() => setShowMedicationDetails(false)}
+                >
+                  <Text style={styles.modalButtonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
+      )}
+    </LinearGradient>
+  );
+};
+
+
+
+
+export default MedicationScreen;

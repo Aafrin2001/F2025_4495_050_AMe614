@@ -51,3 +51,52 @@ const WalkingTrackerScreen: React.FC<WalkingTrackerScreenProps> = ({ onBack, onC
         ])
       );
       pulseAnimation.start();
+
+      // Update timer and steps
+      interval = setInterval(() => {
+        setWalkingDuration((prev) => prev + 1);
+        setSteps((prev) => prev + Math.floor(Math.random() * 3) + 1); // Simulate steps
+      }, 1000);
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+      if (interval) clearInterval(interval);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isWalking]);
+
+  const startWalking = () => {
+    setIsWalking(true);
+    setStartTime(new Date());
+    setWalkingDuration(0);
+    setSteps(0);
+  };
+
+  const stopWalking = () => {
+    setIsWalking(false);
+    const distance = steps * 0.0005; // Approximate miles per step
+    const calories = Math.round(steps * 0.04); // Approximate calories per step
+
+    const walkingData: WalkingData = {
+      duration: walkingDuration,
+      steps: steps,
+      distance: parseFloat(distance.toFixed(2)),
+      calories: calories,
+      completed: true,
+    };
+
+    Alert.alert(
+      'Walk Complete!',
+      `Great job! You walked for ${Math.floor(walkingDuration / 60)}:${(walkingDuration % 60).toString().padStart(2, '0')} minutes.\n\nSteps: ${steps}\nDistance: ${distance.toFixed(2)} miles\nCalories: ${calories}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            setIsWalking(false);
+            setWalkingDuration(0);
+            setSteps(0);
+          }

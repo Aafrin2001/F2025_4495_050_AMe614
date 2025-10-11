@@ -589,7 +589,283 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack }) => {
   );
 };
 
-
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 40,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    padding: 25,
+    marginBottom: 30,
+  },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+  medicationsList: {
+    gap: 15,
+  },
+  medicationCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+  },
+  medicationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  medicationIconContainer: {
+    marginRight: 15,
+  },
+  medicationInfo: {
+    flex: 1,
+  },
+  medicationName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  medicationDosage: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 3,
+  },
+  medicationTime: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  medicationActions: {
+    marginLeft: 10,
+  },
+  takeButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  scheduleList: {
+    gap: 15,
+  },
+  scheduleItem: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scheduleTime: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 10,
+    padding: 10,
+    marginRight: 15,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  scheduleTimeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  scheduleInfo: {
+    flex: 1,
+  },
+  scheduleMedicationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 3,
+  },
+  scheduleDosage: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  scheduleButton: {
+    padding: 8,
+  },
+  scheduleButtonTaken: {
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 20,
+    padding: 30,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '90%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 16,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  notesInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  typeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  typeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  typeButtonSelected: {
+    // Background color set dynamically
+  },
+  typeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  saveButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButtonText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  detailsSection: {
+    marginBottom: 15,
+  },
+  detailsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 5,
+  },
+  detailsValue: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+});
 
 export default MedicationScreen;

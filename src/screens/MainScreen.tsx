@@ -112,7 +112,7 @@ const MainScreen: React.FC<MainScreenProps> = ({
                 </TouchableOpacity>
               )}
             </View>
-
+              {/*Can you figure this out later  */}
             <View style={styles.ctaCard}>
               <Text style={styles.ctaTitle}>Chat with AI</Text>
               <Text style={styles.ctaDescription}>

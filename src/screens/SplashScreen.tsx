@@ -15,9 +15,66 @@ interface SplashScreenProps {
   onFinish: () => void;
 }
 
+const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+  const fadeAnim = new Animated.Value(0);
+  const scaleAnim = new Animated.Value(0.3);
 
+  useEffect(() => {
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-  
+    // Navigate to next screen after 3 seconds
+    const timer = setTimeout(() => {
+      onFinish();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      <StatusBar style="light" />
+      <Animated.View
+        style={[
+          styles.logoContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        <View style={styles.logo}>
+          <Text style={styles.logoText}>EAi</Text>
+        </View>
+        <Text style={styles.tagline}>Your Health Companion, Always Here</Text>
+        <Text style={styles.subtitle}>Personalized healthcare support for seniors</Text>
+      </Animated.View>
+      
+      <Animated.View style={[styles.loadingContainer, { opacity: fadeAnim }]}>
+        <View style={styles.loadingDots}>
+          <View style={[styles.dot, styles.dot1]} />
+          <View style={[styles.dot, styles.dot2]} />
+          <View style={[styles.dot, styles.dot3]} />
+        </View>
+      </Animated.View>
+    </LinearGradient>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -86,5 +143,5 @@ const styles = StyleSheet.create({
   },
 });
 
-
+export default SplashScreen;
 

@@ -364,6 +364,19 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
         </View>
       </ScrollView>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
       {/* Add Activity Modal */}
       {showAddActivity && (
         <Modal

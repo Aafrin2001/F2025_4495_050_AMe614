@@ -365,18 +365,6 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
       </ScrollView>
 
 
-
-
-
-
-
-
-
-
-
-
-
-
       {/* Add Activity Modal */}
       {showAddActivity && (
         <Modal
@@ -413,6 +401,8 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
                 />
               </View>
 
+
+
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Duration (minutes)</Text>
                 <TextInput
@@ -446,6 +436,8 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
     </LinearGradient>
   );
 };
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -701,5 +693,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+
+
 
 export default ActivitiesScreen;

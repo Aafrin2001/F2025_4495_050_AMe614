@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EAi Mobile App - Detailed Technical Documentation (Part 3)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 50px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        .section h2 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 28px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 25px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .code-comment { color: #68d391; font-style: italic; }
+        .code-keyword { color: #f687b3; font-weight: bold; }
+        .code-string { color: #fbb6ce; }
+        .code-function { color: #90cdf4; }
+        .code-variable { color: #faf089; }
+        .explanation {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #3182ce;
+        }
+        .important {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        .step {
+            background: #f7fafc;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4299e1;
+        }
+        .step h5 {
+            color: #2b6cb0;
+            margin-top: 0;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EAi Mobile App - Detailed Technical Documentation</h1>
+            <h2>Part 3: Health Monitoring & Activities</h2>
+        </div>
+
+        <div class="content">
+            <!-- Health Monitoring Analysis -->
+            <div class="section">
+                <h2>❤️ HealthMonitoringScreen.tsx - Vital Signs Tracking</h2>
+                <p><strong>File Size:</strong> 350+ lines | <strong>Purpose:</strong> Health data visualization and management</p>
+
+                <div class="step">
+                    <h5>Step 1: Data Structure and State Management</h5>
+                    <div class="code-block">
+<span class="line-number">1-25</span><span class="code-keyword">import</span> React, { useState } <span class="code-keyword">from</span> <span class="code-string">'react'</span>;
+<span class="line-number">2</span><span class="code-keyword">import</span> { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert } <span class="code-keyword">from</span> <span class="code-string">'react-native'</span>;
+<span class="line-number">3</span><span class="code-keyword">import</span> { LinearGradient } <span class="code-keyword">from</span> <span class="code-string">'expo-linear-gradient'</span>;
+<span class="line-number">4</span><span class="code-keyword">import</span> { StatusBar } <span class="code-keyword">from</span> <span class="code-string">'expo-status-bar'</span>;
+<span class="line-number">5</span><span class="code-keyword">import</span> { Ionicons } <span class="code-keyword">from</span> <span class="code-string">'@expo/vector-icons'</span>;
+<span class="line-number">6</span><span class="code-keyword">import</span> { VitalSign } <span class="code-keyword">from</span> <span class="code-string">'../types'</span>;
+
+<span class="line-number">8</span><span class="code-keyword">interface</span> HealthMonitoringScreenProps {
+<span class="line-number">9</span>  onBack: () => <span class="code-keyword">void</span>;
+<span class="line-number">10</span>  onScheduleCheck: () => <span class="code-keyword">void</span>;
+<span class="line-number">11</span>}
+
+<span class="line-number">13</span><span class="code-keyword">const</span> HealthMonitoringScreen: React.FC&lt;HealthMonitoringScreenProps&gt; = ({ onBack, onScheduleCheck }) => {
+<span class="line-number">14</span>  <span class="code-keyword">const</span> [vitalSigns, setVitalSigns] = <span class="code-function">useState</span>&lt;VitalSign[]&gt;([
+<span class="line-number">15</span>    {
+<span class="line-number">16</span>      <span class="code-variable">id</span>: <span class="code-string">'1'</span>,
+<span class="line-number">17</span>      <span class="code-variable">name</span>: <span class="code-string">'Heart Rate'</span>,
+<span class="line-number">18</span>      <span class="code-variable">value</span>: <span class="code-string">'72'</span>,
+<span class="line-number">19</span>      <span class="code-variable">unit</span>: <span class="code-string">'bpm'</span>,
+<span class="line-number">20</span>      <span class="code-variable">icon</span>: <span class="code-string">'heart-outline'</span>,
+<span class="line-number">21</span>      <span class="code-variable">color</span>: <span class="code-string">'#FF6B6B'</span>,
+<span class="line-number">22</span>    },
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The HealthMonitoringScreen manages vital signs data using a structured approach:</p>
+                        <ul>
+                            <li><strong>VitalSign interface:</strong> Ensures type safety for health data</li>
+                            <li><strong>Initial data:</strong> Pre-populated with sample vital signs</li>
+                            <li><strong>Props interface:</strong> Defines required navigation callbacks</li>
+                            <li><strong>State management:</strong> Uses useState for dynamic data updates</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 2: Modal State Management for Adding Readings</h5>
+                    <div class="code-block">
+<span class="line-number">30-45</span><span class="code-keyword">const</span> [showAddModal, setShowAddModal] = <span class="code-function">useState</span>(<span class="code-keyword">false</span>);
+<span class="line-number">31</span><span class="code-keyword">const</span> [newReading, setNewReading] = <span class="code-function">useState</span>({
+<span class="line-number">32</span>  <span class="code-variable">vitalSign</span>: <span class="code-string">''</span>,
+<span class="line-number">33</span>  <span class="code-variable">value</span>: <span class="code-string">''</span>,
+<span class="line-number">34</span>  <span class="code-variable">unit</span>: <span class="code-string">''</span>,
+<span class="line-number">35</span>});
+
+<span class="line-number">37</span><span class="code-keyword">const</span> <span class="code-function">handleAddReading</span> = () => {
+<span class="line-number">38</span>  <span class="code-keyword">if</span> (!newReading.vitalSign || !newReading.value) {
+<span class="code-keyword">return</span>;
+<span class="line-number">39</span>  }
+
+<span class="line-number">41</span>  <span class="code-keyword">const</span> reading: VitalSign = {
+<span class="line-number">42</span>    <span class="code-variable">id</span>: <span class="code-function">Date.now</span>().<span class="code-function">toString</span>(),
+<span class="line-number">43</span>    <span class="code-variable">name</span>: newReading.vitalSign,
+<span class="line-number">44</span>    <span class="code-variable">value</span>: newReading.value,
+<span class="line-number">45</span>    <span class="code-variable">unit</span>: newReading.unit,
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The modal system for adding new readings includes:</p>
+                        <ul>
+                            <li><strong>Modal visibility:</strong> Boolean state to show/hide the add modal</li>
+                            <li><strong>Form data:</strong> Separate state for new reading input</li>
+                            <li><strong>Validation:</strong> Checks required fields before adding</li>
+                            <li><strong>ID generation:</span> Uses Date.now() for unique IDs</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 3: Quick Actions Implementation</h5>
+                    <div class="code-block">
+<span class="line-number">60-80</span><span class="code-keyword">const</span> <span class="code-function">handleQuickAction</span> = (action: <span class="code-keyword">string</span>) => {
+<span class="line-number">61</span>  <span class="code-keyword">switch</span> (action) {
+<span class="line-number">62</span>    <span class="code-keyword">case</span> <span class="code-string">'add'</span>:
+<span class="line-number">63</span>      <span class="code-function">setShowAddModal</span>(<span class="code-keyword">true</span>);
+<span class="line-number">64</span>      <span class="code-keyword">break</span>;
+<span class="line-number">65</span>    <span class="code-keyword">case</span> <span class="code-string">'schedule'</span>:
+<span class="line-number">66</span>      <span class="code-function">onScheduleCheck</span>();
+<span class="line-number">67</span>      <span class="code-keyword">break</span>;
+<span class="line-number">68</span>    <span class="code-keyword">case</span> <span class="code-string">'history'</span>:
+<span class="line-number">69</span>      <span class="code-function">Alert.alert</span>(<span class="code-string">'History'</span>, <span class="code-string">'Health history feature coming soon!'</span>);
+<span class="line-number">70</span>      <span class="code-keyword">break</span>;
+<span class="line-number">71</span>    <span class="code-keyword">default</span>:
+<span class="line-number">72</span>      <span class="code-keyword">break</span>;
+<span class="line-number">73</span>  }
+<span class="line-number">74</span>};
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The quick actions system provides easy access to common functions:</p>
+                        <ul>
+                            <li><strong>Switch statement:</strong> Handles different action types efficiently</li>
+                            <li><strong>Modal control:</strong> Opens add reading modal for 'add' action</li>
+                            <li><strong>Navigation:</strong> Calls onScheduleCheck for 'schedule' action</li>
+                            <li><strong>User feedback:</strong> Shows alert for unimplemented features</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activities Screen Analysis -->
+            <div class="section">
+                <h2>🎯 ActivitiesScreen.tsx - Health Activities Hub</h2>
+                <p><strong>File Size:</strong> 500+ lines | <strong>Purpose:</strong> Health activities and brain games management</p>
+
+                <div class="step">
+                    <h5>Step 1: Complex State Management</h5>
+                    <div class="code-block">
+<span class="line-number">15-35</span><span class="code-keyword">const</span> [activities, setActivities] = <span class="code-function">useState</span>&lt;Activity[]&gt;([
+<span class="line-number">16</span>  {
+<span class="line-number">17</span>    <span class="code-variable">id</span>: <span class="code-string">'1'</span>,
+<span class="line-number">18</span>    <span class="code-variable">name</span>: <span class="code-string">'Morning Walk'</span>,
+<span class="line-number">19</span>    <span class="code-variable">description</span>: <span class="code-string">'Take a gentle 15-minute walk around your neighborhood'</span>,
+<span class="line-number">20</span>    <span class="code-variable">icon</span>: <span class="code-string">'walk-outline'</span>,
+<span class="line-number">21</span>    <span class="code-variable">color</span>: <span class="code-string">'#4CAF50'</span>,
+<span class="line-number">22</span>    <span class="code-variable">duration</span>: 15,
+<span class="line-number">23</span>    <span class="code-variable">completed</span>: <span class="code-keyword">false</span>,
+<span class="line-number">24</span>    <span class="code-variable">points</span>: 10,
+<span class="line-number">25</span>  },
+<span class="line-number">26</span>  <span class="code-comment">// ... more activities</span>
+<span class="line-number">27</span>]);
+
+<span class="line-number">29</span><span class="code-keyword">const</span> [games, setGames] = <span class="code-function">useState</span>&lt;Game[]&gt;([
+<span class="line-number">30</span>  {
+<span class="line-number">31</span>    <span class="code-variable">id</span>: <span class="code-string">'1'</span>,
+<span class="line-number">32</span>    <span class="code-variable">name</span>: <span class="code-string">'Memory Match'</span>,
+<span class="line-number">33</span>    <span class="code-variable">description</span>: <span class="code-string">'Match pairs of cards to improve memory'</span>,
+<span class="line-number">34</span>    <span class="code-variable">icon</span>: <span class="code-string">'brain-outline'</span>,
+<span class="line-number">35</span>    <span class="code-variable">color</span>: <span class="code-string">'#E91E63'</span>,
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The ActivitiesScreen manages two separate data arrays:</p>
+                        <ul>
+                            <li><strong>Activities array:</strong> Health-related activities with completion tracking</li>
+                            <li><strong>Games array:</strong> Brain games for cognitive health</li>
+                            <li><strong>Points system:</strong> Gamification with point rewards</li>
+                            <li><strong>Color coding:</strong> Visual differentiation for different activity types</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 2: Navigation Handler System</h5>
+                    <div class="code-block">
+<span class="line-number">60-85</span><span class="code-keyword">const</span> <span class="code-function">handleActivityPress</span> = (id: <span class="code-keyword">string</span>) => {
+<span class="line-number">61</span>  <span class="code-keyword">const</span> activity = activities.<span class="code-function">find</span>(a => a.id === id);
+<span class="line-number">62</span>  <span class="code-keyword">if</span> (!activity) <span class="code-keyword">return</span>;
+
+<span class="line-number">64</span>  <span class="code-comment">// Navigate to specific activity page</span>
+<span class="line-number">65</span>  <span class="code-keyword">switch</span> (id) {
+<span class="line-number">66</span>    <span class="code-keyword">case</span> <span class="code-string">'1'</span>: <span class="code-comment">// Morning Walk</span>
+<span class="line-number">67</span>      <span class="code-function">onNavigateToWalking</span>();
+<span class="line-number">68</span>      <span class="code-keyword">break</span>;
+<span class="line-number">69</span>    <span class="code-keyword">case</span> <span class="code-string">'2'</span>: <span class="code-comment">// Stretching</span>
+<span class="line-number">70</span>      <span class="code-function">onNavigateToStretching</span>();
+<span class="line-number">71</span>      <span class="code-keyword">break</span>;
+<span class="line-number">72</span>    <span class="code-keyword">case</span> <span class="code-string">'3'</span>: <span class="code-comment">// Deep Breathing</span>
+<span class="line-number">73</span>      <span class="code-function">onNavigateToBreathing</span>();
+<span class="line-number">74</span>      <span class="code-keyword">break</span>;
+<span class="line-number">75</span>    <span class="code-keyword">case</span> <span class="code-string">'4'</span>: <span class="code-comment">// Sleep Cycle</span>
+<span class="line-number">76</span>      <span class="code-function">onNavigateToSleep</span>();
+<span class="line-number">77</span>      <span class="code-keyword">break</span>;
+<span class="line-number">78</span>    <span class="code-keyword">default</span>:
+<span class="line-comment">      // For custom activities, just toggle completion</span>
+<span class="line-number">79</span>      <span class="code-function">handleActivityComplete</span>(id);
+<span class="line-number">80</span>      <span class="code-keyword">break</span>;
+<span class="line-number">81</span>  }
+<span class="line-number">82</span>};
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> This sophisticated navigation system handles different activity types:</p>
+                        <ul>
+                            <li><strong>Activity lookup:</strong> Finds the specific activity by ID</li>
+                            <li><strong>Switch-based routing:</strong> Routes to appropriate screen based on activity type</li>
+                            <li><strong>Fallback handling:</strong> Default case handles custom activities</li>
+                            <li><strong>Prop passing:</strong> Calls specific navigation functions passed as props</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 3: Points System and Completion Tracking</h5>
+                    <div class="code-block">
+<span class="line-number">85-105</span><span class="code-keyword">const</span> <span class="code-function">handleActivityComplete</span> = (id: <span class="code-keyword">string</span>) => {
+<span class="line-number">86</span>  <span class="code-function">setActivities</span>(activities.<span class="code-function">map</span>(activity =>
+<span class="line-number">87</span>    activity.id === id 
+<span class="line-number">88</span>      ? { ...activity, <span class="code-variable">completed</span>: !activity.completed }
+<span class="line-number">89</span>      : activity
+<span class="line-number">90</span>  ));
+  
+<span class="line-number">92</span>  <span class="code-keyword">const</span> activity = activities.<span class="code-function">find</span>(a => a.id === id);
+<span class="line-number">93</span>  <span class="code-keyword">if</span> (activity && !activity.completed) {
+<span class="line-number">94</span>    <span class="code-function">setTotalPoints</span>(prev => prev + activity.points);
+<span class="line-number">95</span>    <span class="code-function">Alert.alert</span>(<span class="code-string">'Great Job!'</span>, <span class="code-string">`You earned ${activity.points} points!`</span>);
+<span class="line-number">96</span>  }
+<span class="line-number">97</span>};
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The completion system provides user engagement through:</p>
+                        <ul>
+                            <li><strong>Immutable updates:</strong> Uses map() to create new array with updated activity</li>
+                            <li><strong>Toggle logic:</strong> Switches completion status on each press</li>
+                            <li><strong>Points calculation:</strong> Adds points only when completing (not uncompleting)</li>
+                            <li><strong>User feedback:</strong> Shows success message with points earned</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Walking Tracker Analysis -->
+            <div class="section">
+                <h2>🚶 WalkingTrackerScreen.tsx - Activity Tracking</h2>
+                <p><strong>File Size:</strong> 300+ lines | <strong>Purpose:</strong> Real-time walking activity tracking</p>
+
+                <div class="step">
+                    <h5>Step 1: Timer and Tracking State</h5>
+                    <div class="code-block">
+<span class="line-number">15-30</span><span class="code-keyword">const</span> [isTracking, setIsTracking] = <span class="code-function">useState</span>(<span class="code-keyword">false</span>);
+<span class="line-number">16</span><span class="code-keyword">const</span> [duration, setDuration] = <span class="code-function">useState</span>(0);
+<span class="line-number">17</span><span class="code-keyword">const</span> [steps, setSteps] = <span class="code-function">useState</span>(0);
+<span class="line-number">18</span><span class="code-keyword">const</span> [distance, setDistance] = <span class="code-function">useState</span>(0);
+<span class="line-number">19</span><span class="code-keyword">const</span> [calories, setCalories] = <span class="code-function">useState</span>(0);
+<span class="line-number">20</span><span class="code-keyword">const</span> [startTime, setStartTime] = <span class="code-function">useState</span>&lt;Date | <span class="code-keyword">null</span>&gt;(<span class="code-keyword">null</span>);
+<span class="line-number">21</span><span class="code-keyword">const</span> [showCompletion, setShowCompletion] = <span class="code-function">useState</span>(<span class="code-keyword">false</span>);
+
+<span class="line-number">23</span><span class="code-keyword">const</span> timerRef = <span class="code-function">useRef</span>&lt;NodeJS.Timeout | <span class="code-keyword">null</span>&gt;(<span class="code-keyword">null</span>);
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The walking tracker manages multiple pieces of state:</p>
+                        <ul>
+                            <li><strong>Tracking state:</strong> Boolean to know if currently tracking</li>
+                            <li><strong>Metrics:</strong> Duration, steps, distance, calories</li>
+                            <li><strong>Time tracking:</strong> Start time for duration calculation</li>
+                            <li><strong>UI state:</strong> Completion modal visibility</li>
+                            <li><strong>Timer reference:</strong> For cleanup when component unmounts</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 2: Start/Stop Tracking Logic</h5>
+                    <div class="code-block">
+<span class="line-number">32-55</span><span class="code-keyword">const</span> <span class="code-function">startTracking</span> = () => {
+<span class="line-number">33</span>  <span class="code-function">setIsTracking</span>(<span class="code-keyword">true</span>);
+<span class="line-number">34</span>  <span class="code-function">setStartTime</span>(<span class="code-keyword">new</span> <span class="code-function">Date</span>());
+<span class="line-number">35</span>  
+<span class="line-number">36</span>  <span class="code-comment">// Start timer that updates every second</span>
+<span class="line-number">37</span>  timerRef.current = <span class="code-function">setInterval</span>(() => {
+<span class="line-number">38</span>    <span class="code-function">setDuration</span>(prev => prev + 1);
+<span class="line-number">39</span>    
+<span class="code-comment">    // Simulate step counting (in real app, use device sensors)</span>
+<span class="line-number">40</span>    <span class="code-function">setSteps</span>(prev => prev + <span class="code-function">Math.floor</span>(<span class="code-function">Math.random</span>() * 3) + 1);
+<span class="line-number">41</span>    
+<span class="code-comment">// Calculate distance (average 2.5 feet per step)</span>
+<span class="line-number">42</span>    <span class="code-function">setDistance</span>(prev => prev + 0.0025);
+<span class="line-number">43</span>    
+<span class="code-comment">// Calculate calories (roughly 0.04 calories per step)</span>
+<span class="line-number">44</span>    <span class="code-function">setCalories</span>(prev => prev + 0.04);
+<span class="line-number">45</span>  }, 1000);
+<span class="line-number">46</span>};
+
+<span class="line-number">48</span><span class="code-keyword">const</span> <span class="code-function">stopTracking</span> = () => {
+<span class="line-number">49</span>  <span class="code-function">setIsTracking</span>(<span class="code-keyword">false</span>);
+<span class="line-number">50</span>  
+<span class="code-keyword">if</span> (timerRef.current) {
+<span class="line-number">51</span>    <span class="code-function">clearInterval</span>(timerRef.current);
+<span class="line-number">52</span>  }
+<span class="line-number">53</span>  
+<span class="code-function">setShowCompletion</span>(<span class="code-keyword">true</span>);
+<span class="line-number">54</span>};
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The tracking system implements real-time updates:</p>
+                        <ul>
+                            <li><strong>Start logic:</strong> Sets tracking state and starts interval timer</li>
+                            <li><strong>Simulated data:</strong> Generates realistic step counts and metrics</li>
+                            <li><strong>Calculations:</strong> Converts steps to distance and calories</li>
+                            <li><strong>Stop logic:</strong> Clears timer and shows completion modal</li>
+                            <li><strong>Memory management:</strong> Properly cleans up intervals</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Match Game Analysis -->
+            <div class="section">
+                <h2>🧠 MemoryMatchScreen.tsx - Brain Game Implementation</h2>
+                <p><strong>File Size:</strong> 400+ lines | <strong>Purpose:</strong> Memory matching game for cognitive health</p>
+
+                <div class="step">
+                    <h5>Step 1: Game State and Card Management</h5>
+                    <div class="code-block">
+<span class="line-number">15-35</span><span class="code-keyword">const</span> [cards, setCards] = <span class="code-function">useState</span>&lt;Card[]&gt;([]);
+<span class="line-number">16</span><span class="code-keyword">const</span> [flippedCards, setFlippedCards] = <span class="code-function">useState</span>&lt;Card[]&gt;([]);
+<span class="line-number">17</span><span class="code-keyword">const</span> [matchedPairs, setMatchedPairs] = <span class="code-function">useState</span>(0);
+<span class="line-number">18</span><span class="code-keyword">const</span> [moves, setMoves] = <span class="code-function">useState</span>(0);
+<span class="line-number">19</span><span class="code-keyword">const</span> [time, setTime] = <span class="code-function">useState</span>(0);
+<span class="line-number">20</span><span class="code-keyword">const</span> [gameStarted, setGameStarted] = <span class="code-function">useState</span>(<span class="code-keyword">false</span>);
+<span class="line-number">21</span><span class="code-keyword">const</span> [gameCompleted, setGameCompleted] = <span class="code-function">useState</span>(<span class="code-keyword">false</span>);
+
+<span class="line-number">23</span><span class="code-keyword">const</span> CARD_VALUES = [<span class="code-string">'🍎'</span>, <span class="code-string">'🍌'</span>, <span class="code-string">'🍇'</span>, <span class="code-string">'🍊'</span>, <span class="code-string">'🍓'</span>, <span class="code-string">'🍍'</span>, <span class="code-string">'🥝'</span>, <span class="code-string">'🥭'</span>]; <span class="code-comment">// 8 pairs</span>
+
+<span class="line-number">25</span><span class="code-keyword">interface</span> Card {
+<span class="line-number">26</span>  <span class="code-variable">id</span>: <span class="code-keyword">string</span>;
+<span class="line-number">27</span>  <span class="code-variable">value</span>: <span class="code-keyword">string</span>;
+<span class="line-number">28</span>  <span class="code-variable">isFlipped</span>: <span class="code-keyword">boolean</span>;
+<span class="line-number">29</span>  <span class="code-variable">isMatched</span>: <span class="code-keyword">boolean</span>;
+<span class="line-number">30</span>}
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The memory game manages complex state for gameplay:</p>
+                        <ul>
+                            <li><strong>Card array:</strong> All game cards with their states</li>
+                            <li><strong>Flipped cards:</strong> Currently revealed cards (max 2)</li>
+                            <li><strong>Game metrics:</strong> Moves, time, matched pairs</li>
+                            <li><strong>Game states:</strong> Started, completed flags</li>
+                            <li><strong>Card interface:</strong> Defines card structure with ID, value, and states</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 2: Card Shuffling and Game Initialization</h5>
+                    <div class="code-block">
+<span class="line-number">40-60</span><span class="code-keyword">const</span> <span class="code-function">initializeGame</span> = () => {
+<span class="line-number">41</span>  <span class="code-keyword">const</span> shuffledCards = <span class="code-function">shuffleArray</span>(
+<span class="line-number">42</span>    [...CARD_VALUES, ...CARD_VALUES].<span class="code-function">map</span>((value, index) => ({
+<span class="line-number">43</span>      <span class="code-variable">id</span>: <span class="code-string">`card-${index}`</span>,
+<span class="code-variable">value</span>,
+<span class="line-number">44</span>      <span class="code-variable">isFlipped</span>: <span class="code-keyword">false</span>,
+<span class="line-number">45</span>      <span class="code-variable">isMatched</span>: <span class="code-keyword">false</span>,
+<span class="line-number">46</span>    }))
+<span class="line-number">47</span>  );
+<span class="line-number">48</span>  <span class="code-function">setCards</span>(shuffledCards);
+<span class="line-number">49</span>  <span class="code-function">setFlippedCards</span>([]);
+<span class="line-number">50</span>  <span class="code-function">setMatchedPairs</span>(0);
+<span class="line-number">51</span>  <span class="code-function">setMoves</span>(0);
+<span class="line-number">52</span>  <span class="code-function">setTime</span>(0);
+<span class="line-number">53</span>  <span class="code-function">setGameStarted</span>(<span class="code-keyword">false</span>);
+<span class="line-number">54</span>  <span class="code-function">setGameCompleted</span>(<span class="code-keyword">false</span>);
+<span class="line-number">55</span>};
+
+<span class="line-number">57</span><span class="code-keyword">const</span> <span class="code-function">shuffleArray</span> = (array: <span class="code-keyword">any</span>[]) => {
+<span class="line-number">58</span>  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = array.length - 1; i > 0; i--) {
+<span class="code-keyword">const</span> j = <span class="code-function">Math.floor</span>(<span class="code-function">Math.random</span>() * (i + 1));
+<span class="line-number">59</span>    [array[i], array[j]] = [array[j], array[i]];
+<span class="line-number">60</span>  }
+<span class="line-number">61</span>  <span class="code-keyword">return</span> array;
+<span class="line-number">62</span>};
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> Game initialization creates a randomized card layout:</p>
+                        <ul>
+                            <li><strong>Card duplication:</strong> Spread operator creates pairs from CARD_VALUES</li>
+                            <li><strong>Card mapping:</strong> Converts values to Card objects with unique IDs</li>
+                            <li><strong>Fisher-Yates shuffle:</strong> Implements proper array shuffling algorithm</li>
+                            <li><strong>State reset:</strong> Resets all game state to initial values</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h5>Step 3: Card Matching Logic</h5>
+                    <div class="code-block">
+<span class="line-number">75-105</span><span class="code-keyword">const</span> <span class="code-function">handleCardPress</span> = (card: Card) => {
+<span class="line-number">76</span>  <span class="code-keyword">if</span> (!gameStarted) {
+<span class="line-number">77</span>    <span class="code-function">setGameStarted</span>(<span class="code-keyword">true</span>);
+<span class="line-number">78</span>  }
+<span class="line-number">79</span>  <span class="code-keyword">if</span> (card.isFlipped || card.isMatched || flippedCards.length === 2) {
+<span class="line-number">80</span>    <span class="code-keyword">return</span>;
+<span class="line-number">81</span>  }
+
+<span class="line-number">83</span>  <span class="code-keyword">const</span> newCards = cards.<span class="code-function">map</span>((c) =>
+<span class="line-number">84</span>    c.id === card.id ? { ...c, <span class="code-variable">isFlipped</span>: <span class="code-keyword">true</span> } : c
+<span class="line-number">85</span>  );
+<span class="line-number">86</span>  <span class="code-function">setCards</span>(newCards);
+<span class="code-function">setFlippedCards</span>((prev) => [...prev, { ...card, <span class="code-variable">isFlipped</span>: <span class="code-keyword">true</span> }]);
+<span class="line-number">87</span>};
+
+<span class="line-number">89</span><span class="code-keyword">useEffect</span>(() => {
+<span class="line-number">90</span>  <span class="code-keyword">if</span> (flippedCards.length === 2) {
+<span class="line-number">91</span>    <span class="code-function">setMoves</span>((prev) => prev + 1);
+<span class="code-keyword">const</span> [card1, card2] = flippedCards;
+
+<span class="line-number">93</span>    <span class="code-keyword">if</span> (card1.value === card2.value) {
+<span class="line-number">94</span>      <span class="code-function">setMatchedPairs</span>((prev) => prev + 1);
+<span class="code-function">setCards</span>((prevCards) =>
+<span class="line-number">95</span>        prevCards.<span class="code-function">map</span>((c) =>
+<span class="line-number">96</span>          c.id === card1.id || c.id === card2.id
+<span class="line-number">97</span>            ? { ...c, <span class="code-variable">isMatched</span>: <span class="code-keyword">true</span>, <span class="code-variable">isFlipped</span>: <span class="code-keyword">true</span> }
+<span class="line-number">98</span>            : c
+<span class="line-number">99</span>        )
+<span class="line-number">100</span>      );
+<span class="line-number">101</span>      <span class="code-function">setFlippedCards</span>([]);
+<span class="line-number">102</span>    } <span class="code-keyword">else</span> {
+<span class="line-number">103</span>      <span class="code-function">setTimeout</span>(() => {
+<span class="line-number">104</span>        <span class="code-function">setCards</span>((prevCards) =>
+<span class="line-number">105</span>          prevCards.<span class="code-function">map</span>((c) =>
+                    </div>
+                    <div class="explanation">
+                        <p><strong>Analysis:</strong> The card matching system implements sophisticated game logic:</p>
+                        <ul>
+                            <li><strong>Game start:</strong> Automatically starts game on first card press</li>
+                            <li><strong>Validation:</strong> Prevents invalid card selections</li>
+                            <li><strong>State updates:</strong> Uses immutable updates with map()</li>
+                            <li><strong>Matching logic:</strong> Compares card values when two are flipped</li>
+                            <li><strong>Timeout handling:</strong> Flips cards back after 1 second if no match</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📄 Next: AI Chat & Medication Management</h2>
+                <p>This is Part 3 of the detailed technical documentation. The next part will cover:</p>
+                <ul>
+                    <li>AIChatScreen.tsx - AI-powered text conversation</li>
+                    <li>VoiceChatScreen.tsx - Voice interaction system</li>
+                    <li>MedicationScreen.tsx - Medication management</li>
+                    <li>AdminDashboardScreen.tsx - Caregiver interface</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

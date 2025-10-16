@@ -110,4 +110,164 @@ const SleepCycleScreen: React.FC<SleepCycleScreenProps> = ({ onBack, onComplete 
       quality: newSleep.quality,
       completed: true,
     };
+    // Add to records
+    const newRecord: SleepRecord = {
+      id: Date.now().toString(),
+      date: new Date().toISOString().split('T')[0],
+      bedTime: newSleep.bedTime,
+      wakeTime: newSleep.wakeTime,
+      totalHours: totalHours,
+      quality: newSleep.quality,
+    };
 
+    setSleepRecords([newRecord, ...sleepRecords]);
+    setNewSleep({ bedTime: '', wakeTime: '', quality: 'Good' });
+    setShowLogSleep(false);
+
+    Alert.alert(
+      'Sleep Logged!',
+      `You slept ${totalHours} hours with ${newSleep.quality.toLowerCase()} quality.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete Activity',
+          onPress: () => {
+            onComplete(sleepData);
+            onBack();
+          }
+        }
+      ]
+    );
+  };
+
+  const getQualityColor = (quality: string) => {
+    switch (quality) {
+      case 'Excellent': return '#4CAF50';
+      case 'Good': return '#2196F3';
+      case 'Fair': return '#FF9800';
+      case 'Poor': return '#F44336';
+      default: return '#FFFFFF';
+    }
+  };
+
+  const getSleepScore = () => {
+    if (sleepRecords.length === 0) return 0;
+    
+    const avgHours = sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length;
+    const qualityScore = sleepRecords.reduce((sum, record) => {
+      switch (record.quality) {
+        case 'Excellent': return sum + 4;
+        case 'Good': return sum + 3;
+        case 'Fair': return sum + 2;
+        case 'Poor': return sum + 1;
+        default: return sum;
+      }
+    }, 0) / sleepRecords.length;
+
+    return Math.round((avgHours / 8) * qualityScore * 25); // Max score 100
+  };
+
+  const getSleepAdvice = () => {
+    const avgHours = sleepRecords.length > 0 
+      ? sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length 
+      : 0;
+    
+    if (avgHours < 6) return "Try to get more sleep - aim for 7-9 hours";
+    if (avgHours > 9) return "Consider if you might be oversleeping";
+    if (avgHours >= 7 && avgHours <= 9) return "Great sleep duration! Keep it up";
+    return "Log your sleep to get personalized advice";
+  };
+
+  return (
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      <StatusBar style="light" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Sleep Cycle</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Sleep Overview</Text>
+          <View style={styles.summaryStats}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{getSleepScore()}</Text>
+              <Text style={styles.statLabel}>Sleep Score</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>
+                {sleepRecords.length > 0 
+                  ? Math.round(sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length * 10) / 10
+                  : '0'
+                }
+              </Text>
+              <Text style={styles.statLabel}>Avg Hours</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{sleepRecords.length}</Text>
+              <Text style={styles.statLabel}>Records</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.adviceCard}>
+          <Ionicons name="bulb" size={24} color="#FFD700" />
+          <Text style={styles.adviceText}>{getSleepAdvice()}</Text>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Log New Sleep</Text>
+            <TouchableOpacity
+              style={styles.logButton}
+              onPress={() => setShowLogSleep(true)}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.logButtonText}>Log Sleep</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Sleep Records</Text>
+          {sleepRecords.length === 0 ? (
+            <Text style={styles.noRecordsText}>
+              No sleep records yet. Log your first sleep to get started!
+            </Text>
+          ) : (
+            <View style={styles.recordsList}>
+              {sleepRecords.map((record) => (
+                <View key={record.id} style={styles.recordCard}>
+                  <View style={styles.recordHeader}>
+                    <Text style={styles.recordDate}>{record.date}</Text>
+                    <View style={[styles.qualityBadge, { backgroundColor: getQualityColor(record.quality) }]}>
+                      <Text style={styles.qualityText}>{record.quality}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.recordDetails}>
+                    <View style={styles.timeItem}>
+                      <Ionicons name="moon" size={16} color="#9C27B0" />
+                      <Text style={styles.timeText}>Bed: {record.bedTime}</Text>
+                    </View>
+                    <View style={styles.timeItem}>
+                      <Ionicons name="sunny" size={16} color="#FF9800" />
+                      <Text style={styles.timeText}>Wake: {record.wakeTime}</Text>
+                    </View>
+                    <View style={styles.timeItem}>
+                      <Ionicons name="time" size={16} color="#2196F3" />
+                      <Text style={styles.timeText}>{record.totalHours}h</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>

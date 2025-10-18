@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-interface SleepCycleScreenProps {
+interface PuzzlePiecesScreenProps {
   onBack: () => void;
   onComplete: (data: SleepData) => void;
 }
@@ -32,7 +32,7 @@ interface SleepRecord {
   quality: 'Excellent' | 'Good' | 'Fair' | 'Poor';
 }
 
-const SleepCycleScreen: React.FC<SleepCycleScreenProps> = ({ onBack, onComplete }) => {
+const PuzzlePiecesScreen: React.FC<PuzzlePiecesScreenProps> = ({ onBack, onComplete }) => {
   const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([
     {
       id: '1',

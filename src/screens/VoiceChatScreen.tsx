@@ -77,3 +77,72 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
       pulseAnim.setValue(1);
     }
   }, [isListening]);
+  
+  const handleStartListening = () => {
+    setIsListening(true);
+    // Simulate listening for 3 seconds
+    setTimeout(() => {
+      setIsListening(false);
+      setIsProcessing(true);
+      
+      // Simulate processing
+      setTimeout(() => {
+        setIsProcessing(false);
+        setIsSpeaking(true);
+        
+        const userMessage: VoiceMessage = {
+          id: Date.now().toString(),
+          text: "I need help with my blood pressure reading",
+          isUser: true,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, userMessage]);
+        
+        // Simulate AI response
+        setTimeout(() => {
+          const aiResponse: VoiceMessage = {
+            id: (Date.now() + 1).toString(),
+            text: "I understand you need help with your blood pressure reading. I can help you track your readings and provide guidance. Would you like me to show you how to record a new reading?",
+            isUser: false,
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, aiResponse]);
+          setIsSpeaking(false);
+        }, 2000);
+      }, 1500);
+    }, 3000);
+  };
+
+  const handleStopListening = () => {
+    setIsListening(false);
+    setIsProcessing(true);
+    
+    setTimeout(() => {
+      setIsProcessing(false);
+      Alert.alert('Voice Input', 'Voice recognition stopped. Tap the microphone to try again.');
+    }, 1000);
+  };
+
+  const handleQuickAction = (action: string) => {
+    const quickMessage: VoiceMessage = {
+      id: Date.now().toString(),
+      text: action,
+      isUser: true,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, quickMessage]);
+    setIsSpeaking(true);
+
+    setTimeout(() => {
+      const aiResponse: VoiceMessage = {
+        id: (Date.now() + 1).toString(),
+        text: `I'd be happy to help you with ${action.toLowerCase()}. This feature will be fully functional in the complete version of the app. Is there anything specific you'd like to know about this?`,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsSpeaking(false);
+    }, 1500);
+  };

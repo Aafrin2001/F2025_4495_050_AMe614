@@ -146,3 +146,158 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
       setIsSpeaking(false);
     }, 1500);
   };
+    const renderMessage = (message: VoiceMessage) => (
+    <View
+      key={message.id}
+      style={[
+        styles.messageContainer,
+        message.isUser ? styles.userMessage : styles.aiMessage,
+      ]}
+    >
+      <View
+        style={[
+          styles.messageBubble,
+          message.isUser ? styles.userBubble : styles.aiBubble,
+        ]}
+      >
+        <Text
+          style={[
+            styles.messageText,
+            message.isUser ? styles.userText : styles.aiText,
+          ]}
+        >
+          {message.text}
+        </Text>
+        <View style={styles.messageFooter}>
+          <Text
+            style={[
+              styles.messageTime,
+              message.isUser ? styles.userTime : styles.aiTime,
+            ]}
+          >
+            {message.timestamp.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+          {!message.isUser && (
+            <TouchableOpacity style={styles.playButton}>
+              <Ionicons name="play" size={16} color="#667eea" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderStatusIndicator = () => {
+    if (isListening) {
+      return (
+        <View style={styles.statusContainer}>
+          <Animated.View style={[styles.listeningIndicator, { transform: [{ scale: pulseAnim }] }]}>
+            <Ionicons name="mic" size={24} color="#FFFFFF" />
+          </Animated.View>
+          <Text style={styles.statusText}>Listening...</Text>
+        </View>
+      );
+    }
+    
+    if (isProcessing) {
+      return (
+        <View style={styles.statusContainer}>
+          <View style={styles.processingIndicator}>
+            <Ionicons name="hourglass-outline" size={24} color="#FFFFFF" />
+          </View>
+          <Text style={styles.statusText}>Processing...</Text>
+        </View>
+      );
+    }
+    
+    if (isSpeaking) {
+      return (
+        <View style={styles.statusContainer}>
+          <View style={styles.speakingIndicator}>
+            <Ionicons name="volume-high" size={24} color="#FFFFFF" />
+          </View>
+          <Text style={styles.statusText}>AI is speaking...</Text>
+        </View>
+      );
+    }
+    
+    return null;
+  };
+
+  return (
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      <StatusBar style="light" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Voice Chat</Text>
+          <Text style={styles.headerSubtitle}>Speak naturally</Text>
+        </View>
+        <TouchableOpacity style={styles.menuButton}>
+          <Ionicons name="ellipsis-vertical" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.chatContainer}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {messages.map(renderMessage)}
+        </ScrollView>
+
+        {renderStatusIndicator()}
+
+        <View style={styles.quickActionsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.quickActionsScroll}
+          >
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.quickActionButton}
+                onPress={() => handleQuickAction(action.text)}
+              >
+                <Ionicons name={action.icon as any} size={20} color="#667eea" />
+                <Text style={styles.quickActionText}>{action.text}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.voiceControls}>
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              isListening && styles.voiceButtonActive,
+              (isProcessing || isSpeaking) && styles.voiceButtonDisabled,
+            ]}
+            onPress={isListening ? handleStopListening : handleStartListening}
+            disabled={isProcessing || isSpeaking}
+          >
+            <Ionicons
+              name={isListening ? "stop" : "mic"}
+              size={32}
+              color={isListening ? "#FFFFFF" : "#667eea"}
+            />
+          </TouchableOpacity>
+          <Text style={styles.voiceButtonLabel}>
+            {isListening ? "Tap to stop" : "Tap to speak"}
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+};

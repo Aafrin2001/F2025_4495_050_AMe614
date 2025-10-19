@@ -287,17 +287,4 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
             onPress={isListening ? handleStopListening : handleStartListening}
             disabled={isProcessing || isSpeaking}
           >
-            <Ionicons
-              name={isListening ? "stop" : "mic"}
-              size={32}
-              color={isListening ? "#FFFFFF" : "#667eea"}
-            />
-          </TouchableOpacity>
-          <Text style={styles.voiceButtonLabel}>
-            {isListening ? "Tap to stop" : "Tap to speak"}
-          </Text>
-        </View>
-      </View>
-    </LinearGradient>
-  );
-};
+           };

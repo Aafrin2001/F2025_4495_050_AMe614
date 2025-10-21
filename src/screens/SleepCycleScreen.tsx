@@ -110,3 +110,31 @@ const handleLogSleep = () => {
       quality: newSleep.quality,
       completed: true,
     };
+  const newRecord: SleepRecord = {
+      id: Date.now().toString(),
+      date: new Date().toISOString().split('T')[0],
+      bedTime: newSleep.bedTime,
+      wakeTime: newSleep.wakeTime,
+      totalHours: totalHours,
+      quality: newSleep.quality,
+    };
+
+    setSleepRecords([newRecord, ...sleepRecords]);
+    setNewSleep({ bedTime: '', wakeTime: '', quality: 'Good' });
+    setShowLogSleep(false);
+
+    Alert.alert(
+      'Sleep Logged!',
+      `You slept ${totalHours} hours with ${newSleep.quality.toLowerCase()} quality.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete Activity',
+          onPress: () => {
+            onComplete(sleepData);
+            onBack();
+          }
+        }
+      ]
+    );
+  };

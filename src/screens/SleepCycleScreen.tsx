@@ -138,3 +138,40 @@ const handleLogSleep = () => {
       ]
     );
   };
+    const getQualityColor = (quality: string) => {
+    switch (quality) {
+      case 'Excellent': return '#4CAF50';
+      case 'Good': return '#2196F3';
+      case 'Fair': return '#FF9800';
+      case 'Poor': return '#F44336';
+      default: return '#FFFFFF';
+    }
+  };
+
+  const getSleepScore = () => {
+    if (sleepRecords.length === 0) return 0;
+    
+    const avgHours = sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length;
+    const qualityScore = sleepRecords.reduce((sum, record) => {
+      switch (record.quality) {
+        case 'Excellent': return sum + 4;
+        case 'Good': return sum + 3;
+        case 'Fair': return sum + 2;
+        case 'Poor': return sum + 1;
+        default: return sum;
+      }
+    }, 0) / sleepRecords.length;
+
+    return Math.round((avgHours / 8) * qualityScore * 25); // Max score 100
+  };
+
+  const getSleepAdvice = () => {
+    const avgHours = sleepRecords.length > 0 
+      ? sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length 
+      : 0;
+    
+    if (avgHours < 6) return "Try to get more sleep - aim for 7-9 hours";
+    if (avgHours > 9) return "Consider if you might be oversleeping";
+    if (avgHours >= 7 && avgHours <= 9) return "Great sleep duration! Keep it up";
+    return "Log your sleep to get personalized advice";
+  };

@@ -61,3 +61,27 @@ const SleepCycleScreen: React.FC<SleepCycleScreenProps> = ({ onBack, onComplete 
       quality: 'Excellent',
     },
   ]);
+  const [showLogSleep, setShowLogSleep] = useState(false);
+  const [newSleep, setNewSleep] = useState({
+    bedTime: '',
+    wakeTime: '',
+    quality: 'Good' as 'Excellent' | 'Good' | 'Fair' | 'Poor',
+  });
+
+  const calculateSleepHours = (bedTime: string, wakeTime: string): number => {
+    if (!bedTime || !wakeTime) return 0;
+    
+    const [bedHour, bedMin] = bedTime.split(':').map(Number);
+    const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
+    
+    let bedMinutes = bedHour * 60 + bedMin;
+    let wakeMinutes = wakeHour * 60 + wakeMin;
+    
+    // Handle overnight sleep (wake time is next day)
+    if (wakeMinutes < bedMinutes) {
+      wakeMinutes += 24 * 60; // Add 24 hours
+    }
+    
+    const totalMinutes = wakeMinutes - bedMinutes;
+    return Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal place
+  };

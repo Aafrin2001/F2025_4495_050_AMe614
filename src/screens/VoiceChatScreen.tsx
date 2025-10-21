@@ -288,3 +288,203 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
             disabled={isProcessing || isSpeaking}
           >
            };
+           <Ionicons
+              name={isListening ? "stop" : "mic"}
+              size={32}
+              color={isListening ? "#FFFFFF" : "#667eea"}
+            />
+          </TouchableOpacity>
+          <Text style={styles.voiceButtonLabel}>
+            {isListening ? "Tap to stop" : "Tap to speak"}
+          </Text>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+};
+
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerInfo: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  menuButton: {
+    padding: 8,
+  },
+  chatContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  messagesContainer: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+  messageContainer: {
+    marginVertical: 4,
+  },
+  userMessage: {
+    alignItems: 'flex-end',
+  },
+  aiMessage: {
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  userBubble: {
+    backgroundColor: '#FFFFFF',
+    borderBottomRightRadius: 5,
+  },
+  aiBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderBottomLeftRadius: 5,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  userText: {
+    color: '#667eea',
+  },
+  aiText: {
+    color: '#FFFFFF',
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  messageTime: {
+    fontSize: 12,
+  },
+  userTime: {
+    color: 'rgba(102, 126, 234, 0.6)',
+  },
+  aiTime: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  playButton: {
+    padding: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+  },
+  listeningIndicator: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  processingIndicator: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFA726',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  speakingIndicator: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  quickActionsContainer: {
+    paddingVertical: 15,
+  },
+  quickActionsScroll: {
+    flexDirection: 'row',
+  },
+  quickActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  quickActionText: {
+    color: '#667eea',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  voiceControls: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  voiceButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  voiceButtonActive: {
+    backgroundColor: '#FF6B6B',
+  },
+  voiceButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  voiceButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});
+
+export default VoiceChatScreen;

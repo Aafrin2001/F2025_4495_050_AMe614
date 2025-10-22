@@ -294,3 +294,48 @@ const handleLogSleep = () => {
                 placeholderTextColor="rgba(255, 255, 255, 0.7)"
               />
             </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Sleep Quality</Text>
+              <View style={styles.qualityButtons}>
+                {['Excellent', 'Good', 'Fair', 'Poor'].map((quality) => (
+                  <TouchableOpacity
+                    key={quality}
+                    style={[
+                      styles.qualityButton,
+                      newSleep.quality === quality && styles.qualityButtonSelected,
+                      { borderColor: getQualityColor(quality) }
+                    ]}
+                    onPress={() => setNewSleep({...newSleep, quality: quality as any})}
+                  >
+                    <Text style={[
+                      styles.qualityButtonText,
+                      newSleep.quality === quality && styles.qualityButtonTextSelected,
+                      { color: newSleep.quality === quality ? '#FFFFFF' : getQualityColor(quality) }
+                    ]}>
+                      {quality}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowLogSleep(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleLogSleep}
+              >
+                <Text style={styles.saveButtonText}>Log Sleep</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+    </LinearGradient>
+  );
+};

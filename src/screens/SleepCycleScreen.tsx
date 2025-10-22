@@ -284,3 +284,13 @@ const handleLogSleep = () => {
                 placeholderTextColor="rgba(255, 255, 255, 0.7)"
               />
             </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Wake Time</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={newSleep.wakeTime}
+                onChangeText={(text) => setNewSleep({...newSleep, wakeTime: text})}
+                placeholder="07:00"
+                placeholderTextColor="rgba(255, 255, 255, 0.7)"
+              />
+            </View>

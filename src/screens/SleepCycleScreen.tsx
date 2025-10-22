@@ -268,3 +268,19 @@ const handleLogSleep = () => {
           )}
         </View>
       </ScrollView>
+      {/* Log Sleep Modal */}
+      {showLogSleep && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Log Your Sleep</Text>
+            
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Bed Time</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={newSleep.bedTime}
+                onChangeText={(text) => setNewSleep({...newSleep, bedTime: text})}
+                placeholder="22:00"
+                placeholderTextColor="rgba(255, 255, 255, 0.7)"
+              />
+            </View>

@@ -128,3 +128,46 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
     setTime(0);
     setScore(0);
   };
+    const canPlaceWord = (grid: Cell[][], word: string, row: number, col: number, direction: string): boolean => {
+    if (direction === 'horizontal') {
+      if (col + word.length > gridSize) return false;
+      for (let i = 0; i < word.length; i++) {
+        if (grid[row][col + i].letter !== '' && grid[row][col + i].letter !== word[i]) {
+          return false;
+        }
+      }
+    } else {
+      if (row + word.length > gridSize) return false;
+      for (let i = 0; i < word.length; i++) {
+        if (grid[row + i][col].letter !== '' && grid[row + i][col].letter !== word[i]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const placeWord = (grid: Cell[][], word: string, row: number, col: number, direction: string) => {
+    for (let i = 0; i < word.length; i++) {
+      if (direction === 'horizontal') {
+        grid[row][col + i].letter = word[i];
+      } else {
+        grid[row + i][col].letter = word[i];
+      }
+    }
+  };
+
+  const handleCellPress = (cell: Cell) => {
+    if (gameCompleted || cell.isFound) return;
+
+    const newSelectedCells = [...selectedCells, cell];
+    setSelectedCells(newSelectedCells);
+
+    // Update grid with selection
+    setGrid(grid.map(row => 
+      row.map(c => 
+        c.row === cell.row && c.col === cell.col 
+          ? { ...c, isSelected: true }
+          : c
+      )
+    ));

@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  firstName   String
+  lastName    String
+  phoneNumber String?
+  userType    UserType @default(HIRE)
+  password    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  healthRecords    HealthRecord[]
+  activities       Activity[]
+  gameScores       GameScore[]
+  chatMessages     ChatMessage[]
+  medications      Medication[]
+  appointments     Appointment[]
+
+  @@map("users")
+}
+
+model HealthRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  type        HealthType
+  value       String
+  unit        String?
+  notes       String?
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("health_records")
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  type        ActivityType
+  duration    Int      // in minutes
+  completed   Boolean  @default(false)
+  points      Int      @default(0)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activities")
+}
+
+model GameScore {
+  id        String   @id @default(cuid())
+  userId    String
+  gameType  GameType
+  score     Int
+  level     Int?
+  duration  Int?     // in seconds
+  playedAt  DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("game_scores")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  isUser    Boolean
+  timestamp DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model Medication {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  dosage      String
+  frequency   String
+  instructions String?
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("medications")
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  date        DateTime
+  location    String?
+  doctorName  String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+// Enums
+enum UserType {
+  HIRE
+  OFFER
+  BOTH
+}
+
+enum HealthType {
+  BLOOD_PRESSURE
+  HEART_RATE
+  WEIGHT
+  TEMPERATURE
+  BLOOD_SUGAR
+  SLEEP_HOURS
+  MOOD
+  PAIN_LEVEL
+  OTHER
+}
+
+enum ActivityType {
+  WALKING
+  STRETCHING
+  BREATHING
+  SLEEP_CYCLE
+  CUSTOM
+}
+
+enum GameType {
+  MEMORY_MATCH
+  WORD_SEARCH
+  PUZZLE_PIECES
+  NUMBER_SEQUENCE
+}
+

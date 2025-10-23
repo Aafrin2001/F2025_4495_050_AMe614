@@ -249,3 +249,337 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+const renderCell = (cell: Cell) => {
+    return (
+      <TouchableOpacity
+        key={`${cell.row}-${cell.col}`}
+        style={[
+          styles.cell,
+          cell.isSelected && styles.cellSelected,
+          cell.isFound && styles.cellFound
+        ]}
+        onPress={() => handleCellPress(cell)}
+      >
+        <Text style={[
+          styles.cellText,
+          cell.isFound && styles.cellTextFound
+        ]}>
+          {cell.letter}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      <StatusBar style="light" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Word Search</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <View style={styles.content}>
+        {!gameStarted ? (
+          <View style={styles.startContainer}>
+            <View style={styles.instructionCard}>
+              <Ionicons name="search" size={48} color="#3F51B5" />
+              <Text style={styles.instructionTitle}>Word Search Game</Text>
+              <Text style={styles.instructionText}>
+                Find the hidden words in the grid. Words can be horizontal or vertical. Tap letters to select them!
+              </Text>
+              <Text style={styles.difficultyText}>Difficulty: Medium</Text>
+            </View>
+
+            <TouchableOpacity style={styles.startButton} onPress={initializeGame}>
+              <Ionicons name="play" size={32} color="#FFFFFF" />
+              <Text style={styles.buttonText}>Start Game</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView style={styles.gameContainer} showsVerticalScrollIndicator={false}>
+            <View style={styles.gameStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatTime(time)}</Text>
+                <Text style={styles.statLabel}>Time</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{foundWords.length}</Text>
+                <Text style={styles.statLabel}>Found</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{score}</Text>
+                <Text style={styles.statLabel}>Score</Text>
+              </View>
+            </View>
+
+            <View style={styles.gameBoard}>
+              {grid.map((row, rowIndex) => (
+                <View key={rowIndex} style={styles.gridRow}>
+                  {row.map((cell, colIndex) => renderCell(cell))}
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.wordsContainer}>
+              <Text style={styles.wordsTitle}>Words to Find:</Text>
+              <View style={styles.wordsList}>
+                {words.map((word, index) => (
+                  <View key={index} style={styles.wordItem}>
+                    <Text style={[
+                      styles.wordText,
+                      word.found && styles.wordFound
+                    ]}>
+                      {word.text}
+                    </Text>
+                    {word.found && (
+                      <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.hintsContainer}>
+              <Text style={styles.hintsTitle}>Hints:</Text>
+              {words.map((word, index) => (
+                !word.found && (
+                  <Text key={index} style={styles.hintText}>
+                    {word.text}: {word.hint}
+                  </Text>
+                )
+              ))}
+            </View>
+
+            <TouchableOpacity 
+              style={styles.restartButton} 
+              onPress={() => {
+                Alert.alert(
+                  'Restart Game?',
+                  'Are you sure you want to restart? Your progress will be lost.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Restart', onPress: initializeGame }
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="refresh" size={20} color="#FFFFFF" />
+              <Text style={styles.restartButtonText}>Restart</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+      </View>
+    </LinearGradient>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 40,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  startContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  instructionCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  instructionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  instructionText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  difficultyText: {
+    fontSize: 14,
+    color: '#3F51B5',
+    fontWeight: '600',
+  },
+  startButton: {
+    backgroundColor: '#3F51B5',
+    borderRadius: 50,
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  gameContainer: {
+    flex: 1,
+  },
+  gameStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  gameBoard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  cell: {
+    width: 25,
+    height: 25,
+    margin: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cellSelected: {
+    backgroundColor: '#3F51B5',
+  },
+  cellFound: {
+    backgroundColor: '#4CAF50',
+  },
+  cellText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  cellTextFound: {
+    color: '#FFFFFF',
+  },
+  wordsContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  wordsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 15,
+  },
+  wordsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  wordItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+    marginBottom: 10,
+  },
+  wordText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    marginRight: 5,
+  },
+  wordFound: {
+    textDecorationLine: 'line-through',
+    color: '#4CAF50',
+  },
+  hintsContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+  },
+  hintsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 15,
+  },
+  hintText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  restartButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  restartButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+});
+
+export default WordSearchScreen;

@@ -15,3 +15,28 @@ interface WordSearchScreenProps {
   onBack: () => void;
   onComplete: (data: GameData) => void;
 }
+interface WordSearchScreenProps {
+  onBack: () => void;
+  onComplete: (data: GameData) => void;
+}
+
+interface GameData {
+  score: number;
+  time: number; // in seconds
+  wordsFound: number;
+  completed: boolean;
+}
+
+interface Word {
+  text: string;
+  found: boolean;
+  hint: string;
+}
+
+interface Cell {
+  letter: string;
+  isSelected: boolean;
+  isFound: boolean;
+  row: number;
+  col: number;
+}

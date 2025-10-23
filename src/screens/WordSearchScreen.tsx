@@ -87,3 +87,44 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
         };
       }
     }
+     const wordsToPlace = [...gameWords];
+    const placedWords: string[] = [];
+
+    wordsToPlace.forEach(wordObj => {
+      const word = wordObj.text;
+      let placed = false;
+      let attempts = 0;
+
+      while (!placed && attempts < 50) {
+        const direction = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+        const row = Math.floor(Math.random() * gridSize);
+        const col = Math.floor(Math.random() * gridSize);
+
+        if (canPlaceWord(newGrid, word, row, col, direction)) {
+          placeWord(newGrid, word, row, col, direction);
+          placedWords.push(word);
+          placed = true;
+        }
+        attempts++;
+      }
+    });
+
+    // Fill remaining cells with random letters
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let row = 0; row < gridSize; row++) {
+      for (let col = 0; col < gridSize; col++) {
+        if (newGrid[row][col].letter === '') {
+          newGrid[row][col].letter = letters[Math.floor(Math.random() * letters.length)];
+        }
+      }
+    }
+
+    setGrid(newGrid);
+    setWords(gameWords.map(w => ({ ...w, found: false })));
+    setGameStarted(true);
+    setGameCompleted(false);
+    setSelectedCells([]);
+    setFoundWords([]);
+    setTime(0);
+    setScore(0);
+  };

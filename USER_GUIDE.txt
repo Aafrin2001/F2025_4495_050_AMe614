@@ -1,0 +1,539 @@
+EAi Healthcare Companion App - User Guide
+
+Welcome to EAi Healthcare Companion
+====================================
+
+EAi (Enabled AI) Healthcare Companion is a comprehensive mobile application designed specifically for seniors and their caregivers. This user-friendly app helps you manage your health, track daily activities, communicate with AI assistance, and maintain your independence while staying connected to your healthcare needs.
+
+Table of Contents
+=================
+1. Getting Started
+2. Account Setup and Login
+3. Main Dashboard Overview
+4. Health Monitoring Features
+5. Activity Tracking and Games
+6. AI Chat Assistant
+7. Medication Management
+8. Settings and Personalization
+9. Troubleshooting
+10. Safety and Privacy
+11. Getting Help
+
+1. Getting Started
+==================
+
+What You'll Need
+----------------
+- A smartphone or tablet (iOS or Android)
+- Internet connection
+- Email address for account creation
+- Basic familiarity with touchscreen devices
+
+Downloading the App
+------------------
+1. Visit the App Store (iOS) or Google Play Store (Android)
+2. Search for "EAi Healthcare Companion"
+3. Tap "Install" or "Get"
+4. Wait for the download to complete
+5. Tap "Open" to launch the app
+
+First Launch
+------------
+When you first open the app, you'll see:
+- Welcome splash screen with the EAi logo
+- Brief introduction to the app's features
+- Option to create a new account or sign in
+
+2. Account Setup and Login
+=========================
+
+Creating Your Account
+---------------------
+1. Tap "Create Account" on the welcome screen
+2. Fill in your information:
+   - First Name: Your given name
+   - Last Name: Your family name
+   - Email Address: A valid email you check regularly
+   - Phone Number: Optional, but helpful for reminders
+   - Password: Choose a secure password (at least 6 characters)
+   - Confirm Password: Re-enter your password
+3. Select your user type:
+   - "A senior looking for health support" - For seniors using the app themselves
+   - "A caregiver or family member" - For family members or caregivers
+4. Tap "Create Account"
+5. You'll receive a confirmation message
+
+Signing In
+----------
+1. Enter your email address
+2. Enter your password
+3. Tap "Sign In"
+4. You'll be taken to the main dashboard
+
+Forgot Password
+---------------
+1. On the login screen, tap "Forgot Password?"
+2. Enter your email address
+3. Check your email for reset instructions
+4. Follow the link to create a new password
+
+3. Main Dashboard Overview
+==========================
+
+The main dashboard is your central hub for accessing all app features. Here's what you'll see:
+
+Top Navigation
+--------------
+- EAi Logo: Tap to return to dashboard
+- Settings Icon: Access app settings
+- Logout Button: Sign out of your account
+
+Welcome Card
+------------
+- Personalized greeting with your name
+- "AI-powered health companion" subtitle
+- Quick overview of your daily progress
+
+Feature Cards
+-------------
+The dashboard displays four main feature cards:
+
+1. Monitor Card (Heart Icon)
+   - Track your health metrics
+   - View health records and trends
+   - Record vital signs
+
+2. Activities Card (Fitness Icon)
+   - Access health activities and games
+   - Track your daily exercise
+   - Play cognitive games
+
+3. Medication Card (Medical Icon)
+   - Manage your medications
+   - Set up reminders
+   - Track adherence
+
+4. Dashboard Card (Analytics Icon)
+   - View your health summary
+   - See progress reports
+   - Access detailed analytics
+
+Chat with AI Button
+------------------
+- Large, prominent button at the bottom
+- Quick access to AI assistant
+- Available for health questions and support
+
+4. Health Monitoring Features
+=============================
+
+Recording Health Data
+---------------------
+1. Tap the "Monitor" card on the main dashboard
+2. Tap "Add New Record"
+3. Select the type of measurement:
+   - Blood Pressure (systolic/diastolic)
+   - Heart Rate (beats per minute)
+   - Weight (pounds or kilograms)
+   - Temperature (Fahrenheit or Celsius)
+   - Blood Sugar (mg/dL)
+   - Sleep Hours
+   - Mood (1-10 scale)
+   - Pain Level (1-10 scale)
+4. Enter your measurement value
+5. Add any notes (optional)
+6. Tap "Save"
+
+Viewing Health Records
+---------------------
+1. From the Health Monitoring screen, tap "View Records"
+2. You'll see a list of all your health measurements
+3. Records are sorted by date (newest first)
+4. Tap any record to view details or edit
+
+Health Summary
+--------------
+1. Tap "Health Summary" to see:
+   - Average values for each health metric
+   - Trends over time (7, 30, or 90 days)
+   - Charts showing your progress
+   - Recommendations based on your data
+
+Setting Health Goals
+--------------------
+1. In the Health Monitoring section, tap "Goals"
+2. Set target values for:
+   - Blood pressure ranges
+   - Weight goals
+   - Exercise minutes per day
+   - Sleep hours per night
+3. The app will track your progress toward these goals
+
+5. Activity Tracking and Games
+===============================
+
+Health Activities
+-----------------
+Access the Activities section to find:
+
+Morning Walk
+- Tap to start a 15-minute walking session
+- Timer will count down your walk
+- Earn 10 points upon completion
+- Track your daily steps
+
+Stretching Exercises
+- 10-minute stretching routine
+- Step-by-step guided instructions
+- Earn 5 points for completion
+- Improves flexibility and mobility
+
+Deep Breathing
+- 5-minute breathing exercise
+- Guided breathing patterns
+- Earn 5 points for completion
+- Reduces stress and anxiety
+
+Sleep Cycle Tracking
+- Record your sleep hours
+- Track sleep quality
+- Earn 15 points for completion
+- Monitor sleep patterns
+
+Adding Custom Activities
+-----------------------
+1. Tap the "+" button in the Activities section
+2. Enter activity name (e.g., "Evening Stroll")
+3. Add description (optional)
+4. Set duration in minutes
+5. Tap "Add Activity"
+6. Your custom activity will appear in the list
+
+Cognitive Games
+---------------
+Memory Match
+- Match pairs of cards to improve memory
+- Three difficulty levels
+- Track your best scores
+- Earn points based on performance
+
+Word Search
+- Find hidden words in letter grids
+- Health and wellness themed puzzles
+- Progressive difficulty
+- Improves cognitive function
+
+Puzzle Pieces
+- Complete jigsaw puzzles
+- Various difficulty levels
+- Relaxing and engaging
+- Enhances problem-solving skills
+
+Number Sequence
+- Complete number patterns
+- Mathematical reasoning exercises
+- Adaptive difficulty
+- Improves logical thinking
+
+Tracking Progress
+-----------------
+- View your activity completion rate
+- See total points earned
+- Track streaks for consistent activities
+- View weekly and monthly summaries
+
+6. AI Chat Assistant
+====================
+
+Accessing AI Chat
+-----------------
+1. Tap "Chat with AI" on the main dashboard
+2. Choose between:
+   - Text Chat: Type your questions
+   - Voice Chat: Speak your questions
+
+Text Chat Features
+------------------
+1. Type your health-related questions
+2. The AI will provide helpful responses
+3. Use quick action buttons for common queries:
+   - "Check my vitals"
+   - "Medication reminder"
+   - "Schedule appointment"
+   - "Emergency help"
+
+Voice Chat Features
+-------------------
+1. Tap the microphone button
+2. Speak clearly into your device
+3. The AI will process your speech
+4. Listen to the AI's response
+5. Tap the microphone again to stop
+
+Common AI Interactions
+----------------------
+Ask questions like:
+- "What's my blood pressure trend?"
+- "When should I take my medication?"
+- "How can I improve my sleep?"
+- "What exercises are good for seniors?"
+- "I'm feeling dizzy, what should I do?"
+
+Emergency Situations
+--------------------
+- For medical emergencies, call 911 immediately
+- The AI can provide general health guidance
+- Always consult healthcare professionals for serious concerns
+- The app is not a substitute for professional medical care
+
+7. Medication Management
+========================
+
+Adding Medications
+------------------
+1. Tap the "Medication" card on the dashboard
+2. Tap "Add Medication"
+3. Enter medication details:
+   - Medication name
+   - Dosage (e.g., "10mg", "1 tablet")
+   - Frequency (e.g., "Twice daily", "Every 8 hours")
+   - Instructions (e.g., "Take with food")
+   - Start date
+   - End date (if applicable)
+4. Tap "Save"
+
+Viewing Medication List
+-----------------------
+1. From the Medication section, tap "My Medications"
+2. See all your current medications
+3. View medication history
+4. Check adherence rates
+
+Setting Reminders
+-----------------
+1. Tap on any medication in your list
+2. Tap "Set Reminder"
+3. Choose reminder times
+4. Enable notifications
+5. The app will remind you when it's time to take medication
+
+Medication Adherence Tracking
+-----------------------------
+- The app tracks when you mark medications as taken
+- View adherence reports
+- See patterns in your medication routine
+- Get alerts for missed doses
+
+8. Settings and Personalization
+===============================
+
+Accessing Settings
+------------------
+1. Tap the settings icon (gear) in the top-right corner
+2. You'll see various configuration options
+
+Profile Settings
+----------------
+- Update your personal information
+- Change email address
+- Update phone number
+- Modify user type (senior/caregiver)
+
+Notification Preferences
+-----------------------
+- Enable/disable medication reminders
+- Set health check-in reminders
+- Configure activity notifications
+- Choose notification sounds
+
+Privacy Settings
+----------------
+- Control data sharing preferences
+- Manage account visibility
+- Set data retention preferences
+- Configure backup settings
+
+Accessibility Options
+--------------------
+- Increase text size
+- Enable high contrast mode
+- Turn on voice-over support
+- Adjust touch sensitivity
+
+Theme and Display
+-----------------
+- Choose between light and dark themes
+- Adjust brightness settings
+- Customize dashboard layout
+- Set preferred language
+
+9. Troubleshooting
+==================
+
+Common Issues and Solutions
+---------------------------
+
+App Won't Open
+--------------
+- Restart your device
+- Check if you have the latest app version
+- Ensure you have sufficient storage space
+- Try uninstalling and reinstalling the app
+
+Login Problems
+--------------
+- Verify your email and password
+- Check your internet connection
+- Try the "Forgot Password" option
+- Contact support if issues persist
+
+Data Not Syncing
+----------------
+- Check your internet connection
+- Ensure you're signed in to your account
+- Try logging out and back in
+- Restart the app
+
+Notifications Not Working
+------------------------
+- Check your device's notification settings
+- Ensure the app has permission to send notifications
+- Verify notification preferences in app settings
+- Restart your device
+
+Performance Issues
+------------------
+- Close other apps to free up memory
+- Restart the app
+- Update to the latest version
+- Restart your device
+
+Getting Technical Support
+------------------------
+- Use the "Help" section in the app
+- Contact support through the app settings
+- Email support@eaihealthcare.com
+- Call the support hotline: 1-800-EAI-HELP
+
+10. Safety and Privacy
+======================
+
+Data Security
+-------------
+- All your health data is encrypted
+- Information is stored securely
+- Regular security updates
+- HIPAA-compliant data handling
+
+Privacy Protection
+------------------
+- Your data is never shared without permission
+- You control who can see your information
+- Regular privacy policy updates
+- Transparent data usage practices
+
+Account Security
+----------------
+- Use a strong, unique password
+- Enable two-factor authentication if available
+- Log out when using shared devices
+- Report suspicious activity immediately
+
+Emergency Contacts
+------------------
+- Add emergency contacts in your profile
+- Share your health data with trusted family members
+- Set up emergency alerts
+- Keep important medical information accessible
+
+11. Getting Help
+================
+
+In-App Help
+-----------
+- Tap the "Help" button in settings
+- Browse frequently asked questions
+- Search for specific topics
+- Contact support directly
+
+User Manual
+-----------
+- Comprehensive guide available in app
+- Video tutorials for key features
+- Step-by-step walkthroughs
+- Regular updates and improvements
+
+Community Support
+-----------------
+- Join the EAi user community
+- Share experiences with other users
+- Get tips and advice
+- Participate in user feedback
+
+Professional Support
+-------------------
+- Connect with healthcare professionals
+- Share your health data with doctors
+- Get personalized recommendations
+- Access to medical resources
+
+Contact Information
+------------------
+- Email: support@eaihealthcare.com
+- Phone: 1-800-EAI-HELP (1-800-324-4357)
+- Website: www.eaihealthcare.com
+- Hours: Monday-Friday, 8 AM - 8 PM EST
+
+Tips for Success
+================
+
+Getting the Most from EAi
+-------------------------
+1. Use the app daily for best results
+2. Set realistic health goals
+3. Take advantage of AI chat for questions
+4. Keep your health data up to date
+5. Use medication reminders consistently
+6. Play cognitive games regularly
+7. Share your progress with family/caregivers
+
+Building Healthy Habits
+-----------------------
+- Start with small, achievable goals
+- Track your progress regularly
+- Celebrate your successes
+- Don't get discouraged by setbacks
+- Use the app's encouragement features
+- Stay consistent with your routine
+
+Staying Motivated
+-----------------
+- Check your points and achievements
+- View your progress charts
+- Set new challenges for yourself
+- Share your success with others
+- Use the AI assistant for encouragement
+- Remember that every small step counts
+
+Conclusion
+==========
+
+The EAi Healthcare Companion App is designed to be your trusted partner in maintaining health and independence. With its user-friendly interface, comprehensive features, and AI-powered assistance, it provides everything you need to manage your health effectively.
+
+Remember:
+- The app is a tool to support your health, not replace professional medical care
+- Always consult healthcare professionals for serious health concerns
+- Use the app consistently for the best results
+- Don't hesitate to reach out for help when you need it
+
+Welcome to the EAi family, and here's to your health and well-being!
+
+---
+
+For additional support or questions, please contact:
+Email: support@eaihealthcare.com
+Phone: 1-800-EAI-HELP
+Website: www.eaihealthcare.com
+
+App Version: 1.0.0
+Last Updated: January 2025

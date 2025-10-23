@@ -1,0 +1,325 @@
+EAi Healthcare Companion App - Frontend Installation Guide
+
+Overview
+========
+
+The EAi Healthcare Companion App is a comprehensive React Native application built with Expo, designed specifically for seniors and their caregivers. This application provides health monitoring, activity tracking, AI-powered chat assistance, medication management, and cognitive games to support healthy aging and independent living.
+
+Prerequisites
+==============
+
+Before installing the EAi Healthcare Companion App frontend, ensure your development environment meets the following requirements:
+
+System Requirements
+------------------
+- Operating System: Windows 10/11, macOS 10.15+, or Linux (Ubuntu 18.04+)
+- Node.js: Version 20.3.1 or higher (recommended: 20.19.4+)
+- npm: Version 9.6.7 or higher
+- Git: Latest version for version control
+- Memory: Minimum 8GB RAM (16GB recommended)
+- Storage: At least 2GB free space
+
+Development Tools
+-----------------
+- Code Editor: Visual Studio Code (recommended) or any modern IDE
+- Expo CLI: For React Native development
+- Android Studio: For Android development (optional)
+- Xcode: For iOS development (macOS only, optional)
+
+Installation Process
+====================
+
+Step 1: Clone the Repository
+----------------------------
+Begin by cloning the EAi Healthcare Companion App repository from GitHub:
+
+git clone https://github.com/Aafrin2001/F2025_4495_050_AMe614.git
+cd F2025_4495_050_AMe614
+
+Step 2: Install Node.js Dependencies
+------------------------------------
+Navigate to the project root directory and install all required dependencies:
+
+npm install
+
+This command will install all the necessary packages including:
+- React Native: Core mobile development framework
+- Expo: Development platform and tools
+- TypeScript: Type-safe JavaScript development
+- Expo Vector Icons: Icon library for UI components
+- Expo Linear Gradient: Gradient background support
+- React Native Web: Web platform support
+
+Step 3: Install Web Dependencies
+---------------------------------
+For web platform support, install the additional web-specific dependencies:
+
+npx expo install react-dom react-native-web
+
+Step 4: Environment Configuration
+---------------------------------
+Create a .env file in the project root to configure environment variables:
+
+# Frontend Configuration
+EXPO_PUBLIC_API_URL=http://localhost:3000/api
+EXPO_PUBLIC_APP_NAME=EAi Healthcare Companion
+EXPO_PUBLIC_VERSION=1.0.0
+
+Step 5: Verify Installation
+---------------------------
+Run the following command to verify that all dependencies are properly installed:
+
+npx expo doctor
+
+This will check for common issues and provide recommendations for optimal development setup.
+
+Running the Application
+=======================
+
+Development Server
+------------------
+Start the Expo development server:
+
+npm start
+
+This will:
+- Start the Metro bundler
+- Generate a QR code for mobile testing
+- Provide local URLs for web and mobile development
+- Enable hot reloading for rapid development
+
+Platform-Specific Commands
+--------------------------
+
+Web Development:
+npm run web
+- Runs the app in a web browser
+- Accessible at http://localhost:8081
+- Supports all React Native components via react-native-web
+
+Android Development:
+npm run android
+- Requires Android Studio and Android SDK
+- Runs on Android emulator or physical device
+- Enables native Android features
+
+iOS Development:
+npm run ios
+- Requires Xcode (macOS only)
+- Runs on iOS Simulator or physical device
+- Enables native iOS features
+
+Application Architecture
+========================
+
+Project Structure
+-----------------
+F2025_4495_050_AMe614/
+├── src/
+│   ├── screens/           # Application screens
+│   │   ├── SplashScreen.tsx
+│   │   ├── OnboardingScreen.tsx
+│   │   ├── AuthScreen.tsx
+│   │   ├── MainScreen.tsx
+│   │   ├── HealthMonitoringScreen.tsx
+│   │   ├── VoiceChatScreen.tsx
+│   │   ├── ActivitiesScreen.tsx
+│   │   └── ...
+│   ├── services/          # API services
+│   │   └── apiService.ts
+│   └── types/            # TypeScript type definitions
+│       └── index.ts
+├── assets/               # Images and icons
+├── App.tsx              # Main application component
+├── package.json         # Dependencies and scripts
+├── tsconfig.json        # TypeScript configuration
+└── app.json            # Expo configuration
+
+Key Features
+============
+
+1. Authentication System
+------------------------
+- User Registration: Support for seniors and caregivers
+- Login/Logout: Secure authentication flow
+- User Types: Different interfaces for different user roles
+- JWT Integration: Token-based authentication with backend
+
+2. Health Monitoring
+--------------------
+- Vital Signs Tracking: Blood pressure, heart rate, weight
+- Health Records: Historical data visualization
+- Health Summary: Analytics and trends
+- Data Persistence: Integration with backend database
+
+3. AI Chat System
+-----------------
+- Voice Chat: Speech-to-text and text-to-speech
+- Text Chat: Traditional messaging interface
+- Quick Actions: Predefined health-related queries
+- Context Awareness: Personalized responses based on user data
+
+4. Activity Management
+----------------------
+- Health Activities: Walking, stretching, breathing exercises
+- Cognitive Games: Memory match, word search, puzzles
+- Progress Tracking: Points system and completion status
+- Custom Activities: User-defined health goals
+
+5. Medication Management
+------------------------
+- Medication Tracking: Dosage and frequency management
+- Reminders: Automated medication alerts
+- History: Medication adherence tracking
+- Integration: Connected with health monitoring
+
+Backend Integration
+===================
+
+API Service Configuration
+-------------------------
+The frontend integrates with a Node.js backend through the apiService.ts:
+
+const API_BASE_URL = 'http://localhost:3000/api';
+
+class ApiService {
+  // Authentication methods
+  async register(userData) { ... }
+  async login(credentials) { ... }
+  
+  // Health monitoring methods
+  async createHealthRecord(recordData) { ... }
+  async getHealthRecords(params) { ... }
+  
+  // Activity management methods
+  async createActivity(activityData) { ... }
+  async completeActivity(activityId) { ... }
+  
+  // Chat system methods
+  async sendMessage(message) { ... }
+  async getChatHistory(params) { ... }
+}
+
+Backend Requirements
+--------------------
+Ensure the backend server is running:
+- Backend URL: http://localhost:3000
+- Database: SQLite with Prisma ORM
+- Authentication: JWT tokens
+- CORS: Enabled for frontend communication
+
+Troubleshooting
+===============
+
+Common Issues and Solutions
+---------------------------
+
+1. Port Conflicts
+   Issue: Port 8081 already in use
+   Solution: npx expo start --port 8082
+
+2. Node.js Version Warnings
+   Issue: Unsupported Node.js version warnings
+   Solution: Update to Node.js 20.19.4+ or ignore warnings (non-critical)
+
+3. Web Dependencies Missing
+   Issue: "react-dom" or "react-native-web" not found
+   Solution: npx expo install react-dom react-native-web
+
+4. Backend Connection Issues
+   Issue: API calls failing
+   Solution: 
+   - Verify backend server is running on port 3000
+   - Check CORS configuration
+   - Ensure API_BASE_URL is correct
+
+5. TypeScript Compilation Errors
+   Issue: Type errors in development
+   Solution: npx tsc --noEmit
+
+Performance Optimization
+========================
+
+1. Bundle Size Optimization
+   - Use dynamic imports for large components
+   - Implement code splitting for better performance
+   - Optimize images and assets
+
+2. Memory Management
+   - Implement proper cleanup in useEffect hooks
+   - Use React.memo for expensive components
+   - Optimize list rendering with FlatList
+
+3. Network Optimization
+   - Implement request caching
+   - Use optimistic updates for better UX
+   - Handle offline scenarios gracefully
+
+Development Best Practices
+==========================
+
+Code Organization
+-----------------
+- Component Structure: Use functional components with hooks
+- State Management: Local state with useState, global with Context API
+- Styling: StyleSheet for consistent styling
+- TypeScript: Strict typing for better code quality
+
+Testing Strategy
+----------------
+- Unit Tests: Component testing with Jest
+- Integration Tests: API integration testing
+- E2E Tests: Full user flow testing
+- Accessibility Tests: Screen reader compatibility
+
+Accessibility Features
+----------------------
+- Large Text: Senior-friendly font sizes
+- High Contrast: Improved visibility
+- Voice Navigation: Voice-over support
+- Simple Navigation: Intuitive user interface
+
+Deployment Options
+==================
+
+Web Deployment
+--------------
+- Expo Web: Direct deployment to web platforms
+- Static Hosting: Netlify, Vercel, or GitHub Pages
+- PWA Support: Progressive Web App capabilities
+
+Mobile Deployment
+-----------------
+- Expo Build: Cloud-based mobile app building
+- App Stores: iOS App Store and Google Play Store
+- Enterprise: Internal distribution for healthcare organizations
+
+Security Considerations
+=======================
+
+Data Protection
+---------------
+- Encryption: All sensitive data encrypted in transit
+- Authentication: Secure JWT token management
+- Privacy: HIPAA-compliant data handling
+- Access Control: Role-based permissions
+
+API Security
+------------
+- HTTPS: Secure communication protocols
+- Input Validation: Client-side and server-side validation
+- Rate Limiting: Protection against abuse
+- CORS: Proper cross-origin resource sharing
+
+Conclusion
+==========
+
+The EAi Healthcare Companion App frontend provides a comprehensive, user-friendly interface for seniors and caregivers to manage health, track activities, and communicate with AI assistance. The React Native/Expo architecture ensures cross-platform compatibility while maintaining native performance and user experience.
+
+The installation process is straightforward, requiring minimal setup for developers familiar with modern web technologies. The modular architecture allows for easy maintenance and feature expansion, making it suitable for both individual use and healthcare organization deployment.
+
+With proper backend integration, the application provides a complete ecosystem for health monitoring and senior care, combining modern technology with user-friendly design principles to support healthy aging and independent living.
+
+Repository: https://github.com/Aafrin2001/F2025_4495_050_AMe614.git
+Backend Branch: bcknd
+Documentation: Complete API documentation available in backend/API_DOCUMENTATION.md

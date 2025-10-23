@@ -9,8 +9,10 @@ expo/
 .expo/
 .expo-shared/
 
-# Source code (as requested to exclude)
+# Frontend source code (as requested to exclude)
 src/
+# But allow backend source code
+!backend/src/
 
 # OS generated files
 .DS_Store

@@ -214,3 +214,38 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
       }, 1000);
     }
   };
+    const completeGame = () => {
+    setGameCompleted(true);
+    const finalScore = score + Math.max(0, 500 - (time * 2));
+    setScore(finalScore);
+
+    Alert.alert(
+      'Congratulations!',
+      `You found all the words!\n\nScore: ${finalScore}\nTime: ${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}\nWords Found: ${foundWords.length + 1}`,
+      [
+        {
+          text: 'Play Again',
+          onPress: () => initializeGame()
+        },
+        {
+          text: 'Complete Activity',
+          onPress: () => {
+            const gameData: GameData = {
+              score: finalScore,
+              time: time,
+              wordsFound: foundWords.length + 1,
+              completed: true,
+            };
+            onComplete(gameData);
+            onBack();
+          }
+        }
+      ]
+    );
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };

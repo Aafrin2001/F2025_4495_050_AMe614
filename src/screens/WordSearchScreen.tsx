@@ -171,3 +171,46 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
           : c
       )
     ));
+        if (newSelectedCells.length >= 3) {
+      checkForWord(newSelectedCells);
+    }
+  };
+
+  const checkForWord = (cells: Cell[]) => {
+    const selectedWord = cells.map(c => c.letter).join('');
+    const foundWord = words.find(w => w.text === selectedWord && !w.found);
+
+    if (foundWord) {
+      // Word found!
+      setWords(words.map(w => 
+        w.text === foundWord.text ? { ...w, found: true } : w
+      ));
+      setFoundWords([...foundWords, foundWord.text]);
+      setScore(prev => prev + 100);
+
+      // Mark cells as found
+      setGrid(grid.map(row => 
+        row.map(c => 
+          cells.some(selected => selected.row === c.row && selected.col === c.col)
+            ? { ...c, isFound: true, isSelected: false }
+            : { ...c, isSelected: false }
+        )
+      ));
+
+      setSelectedCells([]);
+
+      // Check if all words found
+      const allFound = words.every(w => w.text === foundWord.text || w.found);
+      if (allFound) {
+        completeGame();
+      }
+    } else {
+      // No word found - clear selection after delay
+      setTimeout(() => {
+        setGrid(grid.map(row => 
+          row.map(c => ({ ...c, isSelected: false }))
+        ));
+        setSelectedCells([]);
+      }, 1000);
+    }
+  };

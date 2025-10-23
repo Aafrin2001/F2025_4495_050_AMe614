@@ -40,3 +40,50 @@ interface Cell {
   row: number;
   col: number;
 }
+const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete }) => {
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
+  const [grid, setGrid] = useState<Cell[][]>([]);
+  const [words, setWords] = useState<Word[]>([]);
+  const [selectedCells, setSelectedCells] = useState<Cell[]>([]);
+  const [foundWords, setFoundWords] = useState<string[]>([]);
+  const [time, setTime] = useState(0);
+  const [score, setScore] = useState(0);
+
+  const gameWords = [
+    { text: 'HEALTH', hint: 'Your physical well-being' },
+    { text: 'WALK', hint: 'Gentle exercise for seniors' },
+    { text: 'SLEEP', hint: 'Rest your body needs' },
+    { text: 'EAT', hint: 'Nourish your body' },
+    { text: 'SMILE', hint: 'Show happiness' },
+    { text: 'LOVE', hint: 'Deep affection' },
+    { text: 'HOPE', hint: 'Positive expectation' },
+    { text: 'PEACE', hint: 'Calm and quiet' },
+  ];
+
+  const gridSize = 12;
+
+  useEffect(() => {
+    if (gameStarted && !gameCompleted) {
+      const timer = setInterval(() => {
+        setTime(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [gameStarted, gameCompleted]);
+
+  const initializeGame = () => {
+    // Create empty grid
+    const newGrid: Cell[][] = [];
+    for (let row = 0; row < gridSize; row++) {
+      newGrid[row] = [];
+      for (let col = 0; col < gridSize; col++) {
+        newGrid[row][col] = {
+          letter: '',
+          isSelected: false,
+          isFound: false,
+          row,
+          col
+        };
+      }
+    }

@@ -1,0 +1,314 @@
+EAi Healthcare Companion App - User Guide Summary
+
+HOW TO USE THE APP - STEP-BY-STEP GUIDE
+========================================
+
+1. GETTING STARTED
+===================
+
+Download and Install:
+- Go to App Store (iOS) or Google Play Store (Android)
+- Search "EAi Healthcare Companion"
+- Tap "Install" or "Get"
+- Tap "Open" to launch
+
+2. CREATE ACCOUNT
+==================
+
+Step-by-Step Account Creation:
+1. Tap "Create Account" on welcome screen
+2. Fill in required information:
+   - First Name
+   - Last Name
+   - Email Address
+   - Phone Number (optional)
+   - Password (minimum 6 characters)
+   - Confirm Password
+3. Select user type:
+   - "A senior looking for health support" OR
+   - "A caregiver or family member"
+4. Tap "Create Account"
+5. Receive confirmation message
+
+Sign In Process:
+1. Enter email address
+2. Enter password
+3. Tap "Sign In"
+4. Access main dashboard
+
+3. MAIN DASHBOARD NAVIGATION
+=============================
+
+Dashboard Features:
+- EAi Logo (tap to return to dashboard)
+- Settings Icon (top-right corner)
+- Logout Button
+- Welcome Card with personalized greeting
+- Four main feature cards:
+  1. Monitor Card (Heart Icon) - Health tracking
+  2. Activities Card (Fitness Icon) - Exercises and games
+  3. Medication Card (Medical Icon) - Medication management
+  4. Dashboard Card (Analytics Icon) - Health summary
+- "Chat with AI" button (bottom of screen)
+
+4. HEALTH MONITORING STEPS
+===========================
+
+Recording Health Data:
+1. Tap "Monitor" card on dashboard
+2. Tap "Add New Record"
+3. Select measurement type:
+   - Blood Pressure
+   - Heart Rate
+   - Weight
+   - Temperature
+   - Blood Sugar
+   - Sleep Hours
+   - Mood (1-10 scale)
+   - Pain Level (1-10 scale)
+4. Enter measurement value
+5. Add notes (optional)
+6. Tap "Save"
+
+Viewing Health Records:
+1. From Health Monitoring screen, tap "View Records"
+2. See list of all measurements (newest first)
+3. Tap any record to view details or edit
+
+Health Summary:
+1. Tap "Health Summary"
+2. View:
+   - Average values for each metric
+   - Trends over time (7, 30, or 90 days)
+   - Progress charts
+   - Health recommendations
+
+5. ACTIVITY TRACKING STEPS
+===========================
+
+Health Activities:
+1. Tap "Activities" card on dashboard
+2. Choose from available activities:
+   - Morning Walk (15 minutes, 10 points)
+   - Stretching Exercises (10 minutes, 5 points)
+   - Deep Breathing (5 minutes, 5 points)
+   - Sleep Cycle Tracking (15 points)
+3. Tap activity to start
+4. Follow on-screen instructions
+5. Complete activity to earn points
+
+Adding Custom Activities:
+1. Tap "+" button in Activities section
+2. Enter activity name
+3. Add description (optional)
+4. Set duration in minutes
+5. Tap "Add Activity"
+
+Cognitive Games:
+1. Access games from Activities section
+2. Choose game type:
+   - Memory Match
+   - Word Search
+   - Puzzle Pieces
+   - Number Sequence
+3. Play and track scores
+4. Earn points based on performance
+
+6. AI CHAT ASSISTANT STEPS
+===========================
+
+Accessing AI Chat:
+1. Tap "Chat with AI" on main dashboard
+2. Choose chat type:
+   - Text Chat: Type questions
+   - Voice Chat: Speak questions
+
+Text Chat:
+1. Type health-related questions
+2. Use quick action buttons:
+   - "Check my vitals"
+   - "Medication reminder"
+   - "Schedule appointment"
+   - "Emergency help"
+
+Voice Chat:
+1. Tap microphone button
+2. Speak clearly into device
+3. Wait for AI response
+4. Tap microphone again to stop
+
+7. MEDICATION MANAGEMENT STEPS
+===============================
+
+Adding Medications:
+1. Tap "Medication" card on dashboard
+2. Tap "Add Medication"
+3. Enter details:
+   - Medication name
+   - Dosage (e.g., "10mg", "1 tablet")
+   - Frequency (e.g., "Twice daily")
+   - Instructions (e.g., "Take with food")
+   - Start date
+   - End date (if applicable)
+4. Tap "Save"
+
+Viewing Medications:
+1. From Medication section, tap "My Medications"
+2. See all current medications
+3. View medication history
+4. Check adherence rates
+
+Setting Reminders:
+1. Tap on any medication in list
+2. Tap "Set Reminder"
+3. Choose reminder times
+4. Enable notifications
+5. Receive medication reminders
+
+8. SETTINGS AND PERSONALIZATION
+===============================
+
+Accessing Settings:
+1. Tap settings icon (gear) in top-right corner
+2. Configure options:
+   - Profile Settings: Update personal information
+   - Notification Preferences: Enable/disable reminders
+   - Privacy Settings: Control data sharing
+   - Accessibility Options: Increase text size, high contrast
+   - Theme and Display: Light/dark themes
+
+9. DAILY USAGE ROUTINE
+======================
+
+Recommended Daily Steps:
+1. Open app and check dashboard
+2. Record morning health metrics (blood pressure, weight)
+3. Complete morning activity (walking, stretching)
+4. Check medication reminders
+5. Use AI chat for health questions
+6. Play cognitive games
+7. Record evening health data
+8. Review daily progress
+
+10. TROUBLESHOOTING STEPS
+=========================
+
+Common Issues and Solutions:
+
+App Won't Open:
+- Restart device
+- Check for latest app version
+- Ensure sufficient storage space
+- Uninstall and reinstall app
+
+Login Problems:
+- Verify email and password
+- Check internet connection
+- Use "Forgot Password" option
+- Contact support if issues persist
+
+Data Not Syncing:
+- Check internet connection
+- Ensure signed in to account
+- Log out and back in
+- Restart app
+
+Notifications Not Working:
+- Check device notification settings
+- Ensure app has notification permission
+- Verify notification preferences in app
+- Restart device
+
+11. SAFETY AND EMERGENCY STEPS
+==============================
+
+Emergency Situations:
+- For medical emergencies: Call 911 immediately
+- AI provides general health guidance only
+- Always consult healthcare professionals for serious concerns
+- App is not substitute for professional medical care
+
+Account Security:
+- Use strong, unique password
+- Enable two-factor authentication if available
+- Log out when using shared devices
+- Report suspicious activity immediately
+
+12. GETTING HELP STEPS
+======================
+
+In-App Help:
+1. Tap "Help" button in settings
+2. Browse frequently asked questions
+3. Search for specific topics
+4. Contact support directly
+
+External Support:
+- Email: support@eaihealthcare.com
+- Phone: 1-800-EAI-HELP (1-800-324-4357)
+- Website: www.eaihealthcare.com
+- Hours: Monday-Friday, 8 AM - 8 PM EST
+
+QUICK REFERENCE CHECKLIST
+==========================
+
+Daily Checklist:
+□ Open app and check dashboard
+□ Record health metrics
+□ Complete health activity
+□ Check medication reminders
+□ Use AI chat if needed
+□ Play cognitive game
+□ Review progress
+
+Weekly Checklist:
+□ Review health summary
+□ Check medication adherence
+□ Update health goals
+□ Review activity progress
+□ Check app settings
+
+Monthly Checklist:
+□ Review health trends
+□ Update medication list
+□ Check privacy settings
+□ Update emergency contacts
+□ Review app updates
+
+TIPS FOR SUCCESS
+================
+
+Getting Started:
+- Use app daily for best results
+- Set realistic health goals
+- Take advantage of AI chat
+- Keep health data up to date
+- Use medication reminders consistently
+- Play cognitive games regularly
+- Share progress with family/caregivers
+
+Building Habits:
+- Start with small, achievable goals
+- Track progress regularly
+- Celebrate successes
+- Don't get discouraged by setbacks
+- Use app's encouragement features
+- Stay consistent with routine
+
+Staying Motivated:
+- Check points and achievements
+- View progress charts
+- Set new challenges
+- Share success with others
+- Use AI assistant for encouragement
+- Remember every small step counts
+
+IMPORTANT REMINDERS
+===================
+
+- App is a health support tool, not replacement for medical care
+- Always consult healthcare professionals for serious concerns
+- Use app consistently for best results
+- Don't hesitate to reach out for help when needed
+- Keep emergency contacts updated
+- Regularly backup your health data

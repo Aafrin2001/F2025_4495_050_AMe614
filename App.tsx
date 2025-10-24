@@ -174,9 +174,9 @@ export default function App() {
           />
         );
       case 'healthMonitoring':
-        return <HealthMonitoringScreen onBack={handleBackToMain} onScheduleCheck={handleScheduleCheck} />;
+        return <HealthMonitoringScreen onBack={handleBackToMain} onScheduleCheck={handleScheduleCheck} user={user} />;
       case 'scheduleCheck':
-        return <ScheduleCheckScreen onBack={handleBackToMain} />;
+        return <ScheduleCheckScreen onBack={handleHealthMonitoring} />;
       case 'chatSelection':
         return (
           <ChatSelectionScreen 

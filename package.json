@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-community/datetimepicker": "^8.4.5",
     "@supabase/supabase-js": "^2.76.1",
     "expo": "~54.0.10",
     "expo-constants": "^18.0.10",

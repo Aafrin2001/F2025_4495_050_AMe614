@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,11 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -24,10 +29,15 @@ interface ScheduledCheck {
   type: 'doctor' | 'medication' | 'vitals' | 'exercise';
   notes: string;
   completed: boolean;
+  completedAt?: string;
+  createdAt: string;
 }
 
 const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [scheduledChecks, setScheduledChecks] = useState<ScheduledCheck[]>([
     {
       id: '1',
@@ -37,6 +47,7 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       type: 'vitals',
       notes: 'Morning reading',
       completed: false,
+      createdAt: new Date().toISOString(),
     },
     {
       id: '2',
@@ -46,6 +57,7 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       type: 'doctor',
       notes: 'Annual checkup',
       completed: false,
+      createdAt: new Date().toISOString(),
     },
     {
       id: '3',
@@ -55,6 +67,8 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       type: 'medication',
       notes: 'Review with pharmacist',
       completed: true,
+      completedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), // 12 hours ago
+      createdAt: new Date().toISOString(),
     },
   ]);
 
@@ -66,23 +80,52 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
     notes: ''
   });
 
-  const handleAddCheck = () => {
-    if (!newCheck.title || !newCheck.date || !newCheck.time) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
 
-    const check: ScheduledCheck = {
-      id: Date.now().toString(),
-      title: newCheck.title,
-      date: newCheck.date,
-      time: newCheck.time,
-      type: newCheck.type,
-      notes: newCheck.notes,
-      completed: false,
+  // Keyboard event listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
     };
+  }, []);
 
-    setScheduledChecks([...scheduledChecks, check]);
+  // Auto-remove completed checks after 24 hours
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setScheduledChecks(prevChecks => 
+        prevChecks.filter(check => {
+          if (check.completed && check.completedAt) {
+            const completedTime = new Date(check.completedAt);
+            const hoursSinceCompletion = (now.getTime() - completedTime.getTime()) / (1000 * 60 * 60);
+            return hoursSinceCompletion < 24; // Keep if less than 24 hours
+          }
+          return true; // Keep all non-completed checks
+        })
+      );
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
+  const handleCancel = () => {
+    dismissKeyboard();
+    setShowAddForm(false);
     setNewCheck({
       title: '',
       date: '',
@@ -90,15 +133,203 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       type: 'vitals',
       notes: ''
     });
-    setShowAddForm(false);
+  };
+
+  const validateForm = (): string | null => {
+    if (!newCheck.title.trim()) {
+      return 'Title is required';
+    }
+    if (!newCheck.date) {
+      return 'Date is required';
+    }
+    if (!newCheck.time) {
+      return 'Time is required';
+    }
+    
+    // Validate date format and ensure it's not in the past
+    const selectedDateObj = new Date(newCheck.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (isNaN(selectedDateObj.getTime())) {
+      return 'Please select a valid date';
+    }
+    
+    if (selectedDateObj < today) {
+      return 'Date cannot be in the past';
+    }
+    
+    // Validate time format
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(newCheck.time)) {
+      return 'Please select a valid time';
+    }
+    
+    return null;
+  };
+
+  const handleAddCheck = () => {
+    const validationError = validateForm();
+    if (validationError) {
+      Alert.alert('Validation Error', validationError);
+      return;
+    }
+
+    const check: ScheduledCheck = {
+      id: Date.now().toString(),
+      title: newCheck.title.trim(),
+      date: newCheck.date,
+      time: newCheck.time,
+      type: newCheck.type,
+      notes: newCheck.notes.trim(),
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setScheduledChecks([...scheduledChecks, check]);
+    handleCancel();
     Alert.alert('Success', 'Check scheduled successfully!');
   };
 
   const toggleCompleted = (id: string) => {
     setScheduledChecks(scheduledChecks.map(check =>
-      check.id === id ? { ...check, completed: !check.completed } : check
+      check.id === id ? { 
+        ...check, 
+        completed: !check.completed,
+        completedAt: !check.completed ? new Date().toISOString() : undefined
+      } : check
     ));
   };
+
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    setNewCheck({
+      ...newCheck,
+      date: date.toISOString().split('T')[0]
+    });
+    setShowDatePicker(false);
+  };
+
+  const handleTimeChange = (time: Date) => {
+    setSelectedTime(time);
+    const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
+    setNewCheck({
+      ...newCheck,
+      time: timeString
+    });
+    setShowTimePicker(false);
+  };
+
+  // Custom Date Picker Component
+  const renderDatePicker = () => (
+    <Modal
+      visible={showDatePicker}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowDatePicker(false)}
+    >
+      <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+        <View style={styles.pickerOverlay}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={styles.pickerContainer}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Date</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+              <Ionicons name="close" size={24} color="#666666" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.pickerContent}>
+            {Array.from({ length: 365 }, (_, i) => {
+              const date = new Date();
+              date.setDate(date.getDate() + i);
+              const isSelected = selectedDate.toDateString() === date.toDateString();
+              
+              return (
+                <TouchableOpacity
+                  key={i}
+                  style={[
+                    styles.pickerOption,
+                    isSelected && styles.pickerOptionSelected
+                  ]}
+                  onPress={() => handleDateChange(date)}
+                >
+                  <Text style={[
+                    styles.pickerOptionText,
+                    isSelected && styles.pickerOptionTextSelected
+                  ]}>
+                    {date.toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
+  // Custom Time Picker Component
+  const renderTimePicker = () => (
+    <Modal
+      visible={showTimePicker}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowTimePicker(false)}
+    >
+      <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
+        <View style={styles.pickerOverlay}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={styles.pickerContainer}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Time</Text>
+            <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+              <Ionicons name="close" size={24} color="#666666" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.pickerContent}>
+            {Array.from({ length: 24 }, (_, hour) => {
+              return Array.from({ length: 4 }, (_, minuteIndex) => {
+                const minute = minuteIndex * 15; // 0, 15, 30, 45
+                const time = new Date();
+                time.setHours(hour, minute, 0, 0);
+                const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
+                const isSelected = newCheck.time === timeString;
+                
+                return (
+                  <TouchableOpacity
+                    key={`${hour}-${minute}`}
+                    style={[
+                      styles.pickerOption,
+                      isSelected && styles.pickerOptionSelected
+                    ]}
+                    onPress={() => handleTimeChange(time)}
+                  >
+                    <Text style={[
+                      styles.pickerOptionText,
+                      isSelected && styles.pickerOptionTextSelected
+                    ]}>
+                      {timeString}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              });
+            })}
+          </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -170,151 +401,178 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
   );
 
   return (
-    <LinearGradient
-      colors={['#667eea', '#764ba2']}
-      style={styles.container}
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <StatusBar style="light" />
-      
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schedule Check</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Upcoming Checks</Text>
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{scheduledChecks.filter(c => !c.completed).length}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{scheduledChecks.filter(c => c.completed).length}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{scheduledChecks.length}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-          </View>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.container}
+      >
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Schedule Check</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Scheduled Checks</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowAddForm(true)}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Upcoming Checks</Text>
+            <View style={styles.summaryStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.filter(c => !c.completed).length}</Text>
+                <Text style={styles.statLabel}>Pending</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.filter(c => c.completed).length}</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.length}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+            </View>
           </View>
-          
-          <View style={styles.checksList}>
-            {scheduledChecks.map(renderScheduledCheck)}
-          </View>
-        </View>
-      </ScrollView>
 
-      {/* Add Check Modal */}
-      {showAddForm && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Schedule New Check</Text>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Scheduled Checks</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddForm(true)}
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
             
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Title</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={newCheck.title}
-                onChangeText={(text) => setNewCheck({...newCheck, title: text})}
-                placeholder="e.g., Blood Pressure Check"
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Type</Text>
-              <View style={styles.typeButtons}>
-                {['vitals', 'doctor', 'medication', 'exercise'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.typeButton,
-                      newCheck.type === type && styles.typeButtonSelected
-                    ]}
-                    onPress={() => setNewCheck({...newCheck, type: type as any})}
-                  >
-                    <Text style={[
-                      styles.typeButtonText,
-                      newCheck.type === type && styles.typeButtonTextSelected
-                    ]}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Date</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={newCheck.date}
-                  onChangeText={(text) => setNewCheck({...newCheck, date: text})}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                />
-              </View>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Time</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={newCheck.time}
-                  onChangeText={(text) => setNewCheck({...newCheck, time: text})}
-                  placeholder="HH:MM"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Notes (Optional)</Text>
-              <TextInput
-                style={[styles.modalInput, styles.notesInput]}
-                value={newCheck.notes}
-                onChangeText={(text) => setNewCheck({...newCheck, notes: text})}
-                placeholder="Add any notes..."
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setShowAddForm(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleAddCheck}
-              >
-                <Text style={styles.saveButtonText}>Schedule</Text>
-              </TouchableOpacity>
+            <View style={styles.checksList}>
+              {scheduledChecks.map(renderScheduledCheck)}
             </View>
           </View>
-        </View>
-      )}
-    </LinearGradient>
+        </ScrollView>
+
+        {/* Add Check Modal */}
+        {showAddForm && (
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={dismissKeyboard}>
+              <View style={styles.modalBackdrop} />
+            </TouchableWithoutFeedback>
+            <View style={[
+              styles.modalContent,
+              isKeyboardVisible && styles.modalContentKeyboardVisible
+            ]}>
+              <View style={styles.modalFormContent}>
+                <Text style={styles.modalTitle}>Schedule New Check</Text>
+                
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Title *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={newCheck.title}
+                    onChangeText={(text) => setNewCheck({...newCheck, title: text})}
+                    placeholder="e.g., Blood Pressure Check"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                  />
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Type</Text>
+                  <View style={styles.typeButtons}>
+                    {['vitals', 'doctor', 'medication', 'exercise'].map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          styles.typeButton,
+                          newCheck.type === type && styles.typeButtonSelected
+                        ]}
+                        onPress={() => setNewCheck({...newCheck, type: type as any})}
+                      >
+                        <Text style={[
+                          styles.typeButtonText,
+                          newCheck.type === type && styles.typeButtonTextSelected
+                        ]}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.formRow}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Date *</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={styles.pickerButtonText}>
+                        {newCheck.date || 'Select Date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Time *</Text>
+                    <TouchableOpacity
+                      style={styles.pickerButton}
+                      onPress={() => setShowTimePicker(true)}
+                    >
+                      <Text style={styles.pickerButtonText}>
+                        {newCheck.time || 'Select Time'}
+                      </Text>
+                      <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Notes (Optional)</Text>
+                  <TextInput
+                    style={[styles.modalInput, styles.notesInput]}
+                    value={newCheck.notes}
+                    onChangeText={(text) => setNewCheck({...newCheck, notes: text})}
+                    placeholder="Add any notes..."
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+              </View>
+
+              <View style={[
+                styles.modalButtons,
+                isKeyboardVisible && styles.modalButtonsKeyboardVisible
+              ]}>
+                <TouchableOpacity
+                  style={styles.modalButton}
+                  onPress={handleCancel}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton]}
+                  onPress={handleAddCheck}
+                >
+                  <Text style={styles.saveButtonText}>Schedule</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Date Picker */}
+        {renderDatePicker()}
+
+        {/* Time Picker */}
+        {renderTimePicker()}
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -461,12 +719,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   modalContent: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 20,
     padding: 30,
     width: '100%',
     maxWidth: 350,
+    maxHeight: '80%',
+  },
+  modalContentKeyboardVisible: {
+    maxHeight: '75%',
+    marginBottom: 10,
+    paddingBottom: 20,
+  },
+  modalFormContent: {
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
@@ -511,6 +785,18 @@ const styles = StyleSheet.create({
   typeButtonTextSelected: {
     color: '#667eea',
   },
+  pickerButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
   modalInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
@@ -525,7 +811,24 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 20,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  modalButtonsKeyboardVisible: {
+    marginTop: 15,
+    paddingTop: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+    borderTopWidth: 2,
+    borderTopColor: 'rgba(255, 255, 255, 0.3)',
   },
   modalButton: {
     flex: 1,
@@ -534,9 +837,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     marginHorizontal: 5,
+    minHeight: 50,
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   saveButton: {
     backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowOpacity: 0.3,
   },
   modalButtonText: {
     color: '#FFFFFF',
@@ -546,6 +858,57 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#667eea',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    maxHeight: '60%',
+    minHeight: 300,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: '#F8F9FA',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  pickerContent: {
+    maxHeight: 250,
+    backgroundColor: '#FFFFFF',
+  },
+  pickerOption: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#F0F0F0',
+  },
+  pickerOptionSelected: {
+    backgroundColor: '#E3F2FD',
+  },
+  pickerOptionText: {
+    fontSize: 16,
+    color: '#333333',
+    fontWeight: '400',
+  },
+  pickerOptionTextSelected: {
+    color: '#1976D2',
     fontWeight: '600',
   },
 });

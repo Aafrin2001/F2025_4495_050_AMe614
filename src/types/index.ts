@@ -79,31 +79,34 @@ export interface HealthMetricsSummary {
 export interface Activity {
   id: string;
   user_id: string;
-  type: 'walk' | 'exercise' | 'stairs_climbing';
+  type: 'walk' | 'exercise' | 'stairs_climbing' | 'sleep';
   start_time: string;
   end_time?: string;
   duration: number; // Duration in seconds
   calories_burned: number;
   distance: number; // Distance in kilometers
   notes?: string;
+  sleep_quality?: 'poor' | 'fair' | 'good' | 'excellent'; // For sleep activities
   created_at: string;
   updated_at: string;
 }
 
 export interface ActivityInput {
-  type: 'walk' | 'exercise' | 'stairs_climbing';
+  type: 'walk' | 'exercise' | 'stairs_climbing' | 'sleep';
   notes?: string;
+  sleep_quality?: 'poor' | 'fair' | 'good' | 'excellent'; // For sleep activities
 }
 
 export interface ActivitySession {
   id: string;
-  type: 'walk' | 'exercise' | 'stairs_climbing';
+  type: 'walk' | 'exercise' | 'stairs_climbing' | 'sleep';
   startTime: Date;
   endTime?: Date;
   duration: number; // Duration in seconds
   caloriesBurned: number;
   distance: number; // Distance in kilometers
   notes?: string;
+  sleepQuality?: 'poor' | 'fair' | 'good' | 'excellent'; // For sleep activities
   isActive: boolean;
 }
 

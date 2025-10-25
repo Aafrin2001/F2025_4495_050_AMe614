@@ -67,8 +67,9 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   const [sessionDistance, setSessionDistance] = useState(0);
   
   // Form state
-  const [activityType, setActivityType] = useState<'walk' | 'exercise' | 'stairs_climbing'>('walk');
+  const [activityType, setActivityType] = useState<'walk' | 'exercise' | 'stairs_climbing' | 'sleep'>('walk');
   const [notes, setNotes] = useState('');
+  const [sleepQuality, setSleepQuality] = useState<'poor' | 'fair' | 'good' | 'excellent'>('good');
   
   // Games data
   const [games] = useState<Game[]>([
@@ -221,15 +222,81 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     const durationMinutes = sessionDuration / 60;
 
     try {
-      // Save activity to Supabase
+      // For sleep activities, ask for sleep quality before saving
+      if (currentSession.type === 'sleep') {
+        // Show sleep quality selection alert
+        Alert.alert(
+          'Sleep Quality',
+          'How was your sleep quality?',
+          [
+            { text: 'Poor', onPress: () => saveSleepActivity('poor') },
+            { text: 'Fair', onPress: () => saveSleepActivity('fair') },
+            { text: 'Good', onPress: () => saveSleepActivity('good') },
+            { text: 'Excellent', onPress: () => saveSleepActivity('excellent') },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        // For non-sleep activities, save directly
+        await saveActivityToDatabase();
+      }
+    } catch (error) {
+      console.error('Error stopping activity:', error);
+      Alert.alert('Error', 'Failed to save activity');
+    }
+  };
+
+  const saveSleepActivity = async (quality: 'poor' | 'fair' | 'good' | 'excellent') => {
+    try {
+      const endTime = new Date();
+      
+      // Save sleep activity to Supabase
       const result = await ActivityService.saveActivity({
-        type: currentSession.type,
-        start_time: currentSession.startTime.toISOString(),
+        type: currentSession!.type,
+        start_time: currentSession!.startTime.toISOString(),
         end_time: endTime.toISOString(),
         duration: sessionDuration,
         calories_burned: sessionCalories,
         distance: sessionDistance,
-        notes: currentSession.notes || undefined,
+        notes: currentSession!.notes || undefined,
+        sleep_quality: quality,
+      });
+
+      if (result.success) {
+        Alert.alert(
+          'Sleep Activity Completed!',
+          `Great! You slept for ${ActivityService.formatDuration(sessionDuration)} with ${quality} quality.`,
+          [{ text: 'OK' }]
+        );
+        
+        // Refresh data
+        await loadActivities();
+        await loadStats();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to save sleep activity');
+      }
+    } catch (error) {
+      console.error('Error saving sleep activity:', error);
+      Alert.alert('Error', 'Failed to save sleep activity');
+    }
+
+    // Reset session
+    resetSession();
+  };
+
+  const saveActivityToDatabase = async () => {
+    try {
+      const endTime = new Date();
+      
+      // Save activity to Supabase
+      const result = await ActivityService.saveActivity({
+        type: currentSession!.type,
+        start_time: currentSession!.startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        duration: sessionDuration,
+        calories_burned: sessionCalories,
+        distance: sessionDistance,
+        notes: currentSession!.notes || undefined,
       });
 
       if (result.success) {
@@ -246,15 +313,20 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
         Alert.alert('Error', result.error || 'Failed to save activity');
       }
     } catch (error) {
-      console.error('Error stopping activity:', error);
+      console.error('Error saving activity:', error);
       Alert.alert('Error', 'Failed to save activity');
     }
 
     // Reset session
+    resetSession();
+  };
+
+  const resetSession = () => {
     setCurrentSession(null);
     setSessionDuration(0);
     setSessionCalories(0);
     setSessionDistance(0);
+    setSleepQuality('good');
     startTimeRef.current = null;
   };
 
@@ -300,8 +372,9 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     switch (type) {
       case 'walk': return 'walk-outline';
       case 'exercise': return 'fitness-outline';
-      case 'stairs_climbing': return 'stairs-outline';
-      default: return 'activity-outline';
+      case 'stairs_climbing': return 'trending-up-outline';
+      case 'sleep': return 'moon-outline';
+      default: return 'pulse-outline';
     }
   };
 
@@ -310,6 +383,7 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
       case 'walk': return '#4CAF50';
       case 'exercise': return '#FF9800';
       case 'stairs_climbing': return '#9C27B0';
+      case 'sleep': return '#2196F3';
       default: return '#2196F3';
     }
   };
@@ -524,6 +598,16 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
                     </View>
                   </View>
                   
+                  {/* Show sleep quality for sleep activities */}
+                  {activity.type === 'sleep' && activity.sleep_quality && (
+                    <View style={styles.sleepQualityDisplay}>
+                      <Text style={styles.sleepQualityLabel}>Sleep Quality:</Text>
+                      <Text style={[styles.sleepQualityValue, { color: getActivityColor(activity.type) }]}>
+                        {activity.sleep_quality.charAt(0).toUpperCase() + activity.sleep_quality.slice(1)}
+                      </Text>
+                    </View>
+                  )}
+                  
                   <Text style={styles.activityDate}>{formatDate(activity.created_at)}</Text>
                   {activity.notes && (
                     <Text style={styles.activityNotes}>{activity.notes}</Text>
@@ -569,7 +653,7 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
                     <View style={styles.modalFormContent}>
                       <Text style={styles.inputLabel}>Activity Type</Text>
                       <View style={styles.activityTypeSelector}>
-                        {(['walk', 'exercise', 'stairs_climbing'] as const).map((type) => (
+                        {(['walk', 'exercise', 'stairs_climbing', 'sleep'] as const).map((type) => (
                           <TouchableOpacity
                             key={type}
                             style={[
@@ -859,6 +943,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FFFFFF',
     opacity: 0.7,
+  },
+  sleepQualityDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  sleepQualityLabel: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.8,
+    marginRight: 8,
+  },
+  sleepQualityValue: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   activityDate: {
     fontSize: 12,

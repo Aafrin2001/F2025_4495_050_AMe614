@@ -6,6 +6,7 @@ const CALORIE_RATES = {
   walk: 4.0, // Walking at moderate pace
   exercise: 8.0, // General exercise
   stairs_climbing: 12.0, // Stairs climbing
+  sleep: 0.5, // Minimal calories burned during sleep
 };
 
 // Distance estimation constants (km per minute for average person)
@@ -13,6 +14,7 @@ const DISTANCE_RATES = {
   walk: 0.08, // ~5 km/h walking speed
   exercise: 0.12, // ~7 km/h exercise pace
   stairs_climbing: 0.02, // Minimal distance for stairs
+  sleep: 0.0, // No distance during sleep
 };
 
 export class ActivityService {
@@ -57,6 +59,7 @@ export class ActivityService {
     calories_burned: number;
     distance: number;
     notes?: string;
+    sleep_quality?: 'poor' | 'fair' | 'good' | 'excellent';
   }): Promise<{ success: boolean; data?: Activity; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -65,12 +68,25 @@ export class ActivityService {
         return { success: false, error: 'User not authenticated' };
       }
 
+      const insertData: any = {
+        user_id: user.id,
+        type: activityData.type,
+        start_time: activityData.start_time,
+        end_time: activityData.end_time,
+        duration: activityData.duration,
+        calories_burned: activityData.calories_burned,
+        distance: activityData.distance,
+        notes: activityData.notes,
+      };
+
+      // Add sleep_quality only for sleep activities
+      if (activityData.type === 'sleep' && activityData.sleep_quality) {
+        insertData.sleep_quality = activityData.sleep_quality;
+      }
+
       const { data, error } = await supabase
         .from('activities')
-        .insert({
-          user_id: user.id,
-          ...activityData,
-        })
+        .insert(insertData)
         .select()
         .single();
 

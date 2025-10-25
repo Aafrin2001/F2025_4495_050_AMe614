@@ -76,6 +76,17 @@ export const auth = {
     }
   },
 
+  // Get current session
+  getSession: async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
   // Listen to auth state changes
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     return supabase.auth.onAuthStateChange(callback);

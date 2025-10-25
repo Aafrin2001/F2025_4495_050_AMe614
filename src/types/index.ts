@@ -74,3 +74,111 @@ export interface HealthMetricsSummary {
   blood_sugar: HealthMetric | null;
   oxygen_level: HealthMetric | null;
 }
+
+// Activity Types
+export interface Activity {
+  id: string;
+  user_id: string;
+  type: 'walk' | 'exercise' | 'stairs_climbing';
+  start_time: string;
+  end_time?: string;
+  duration: number; // Duration in seconds
+  calories_burned: number;
+  distance: number; // Distance in kilometers
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityInput {
+  type: 'walk' | 'exercise' | 'stairs_climbing';
+  notes?: string;
+}
+
+export interface ActivitySession {
+  id: string;
+  type: 'walk' | 'exercise' | 'stairs_climbing';
+  startTime: Date;
+  endTime?: Date;
+  duration: number; // Duration in seconds
+  caloriesBurned: number;
+  distance: number; // Distance in kilometers
+  notes?: string;
+  isActive: boolean;
+}
+
+export interface ActivityStats {
+  totalActivities: number;
+  totalDuration: number; // Total duration in seconds
+  totalCaloriesBurned: number;
+  totalDistance: number; // Total distance in kilometers
+  averageDuration: number; // Average duration in seconds
+  activitiesThisWeek: number;
+  activitiesThisMonth: number;
+}
+
+// Medication Types
+export interface Medication {
+  id: string;
+  user_id: string;
+  name: string;
+  dosage: string;
+  type: 'pill' | 'liquid' | 'injection' | 'cream' | 'inhaler';
+  frequency: string;
+  time: string[]; // Array of times in HH:MM format
+  instruction?: string;
+  doctor?: string;
+  pharmacy?: string;
+  refill_date?: string;
+  side_effects?: string;
+  is_active: boolean;
+  is_daily: boolean; // true for daily medications, false for as-needed (PRN)
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MedicationInput {
+  name: string;
+  dosage: string;
+  type: 'pill' | 'liquid' | 'injection' | 'cream' | 'inhaler';
+  frequency: string;
+  time: string[];
+  instruction?: string;
+  doctor?: string;
+  pharmacy?: string;
+  refill_date?: string;
+  side_effects?: string;
+  is_active?: boolean;
+  is_daily?: boolean;
+}
+
+export interface MedicationUsage {
+  id: string;
+  medication_id: string;
+  user_id: string;
+  taken_at: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface MedicationScheduleItem {
+  id: string;
+  name: string;
+  dosage: string;
+  type: 'pill' | 'liquid' | 'injection' | 'cream' | 'inhaler';
+  scheduled_time: string;
+  status: 'overdue' | 'due_now' | 'upcoming';
+  instruction?: string;
+  is_daily: boolean;
+  medication_id: string;
+}
+
+export interface MedicationStats {
+  totalMedications: number;
+  activeDailyMedications: number;
+  activePrnMedications: number;
+  totalReminders: number;
+  overdueMedications: number;
+  medicationsDueNow: number;
+  prnUsedToday: number;
+}

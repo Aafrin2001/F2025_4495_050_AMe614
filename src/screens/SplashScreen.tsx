@@ -13,9 +13,10 @@ const { width, height } = Dimensions.get('window');
 
 interface SplashScreenProps {
   onFinish: () => void;
+  isLoading?: boolean;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish, isLoading = false }) => {
   const fadeAnim = new Animated.Value(0);
   const scaleAnim = new Animated.Value(0.3);
 
@@ -35,13 +36,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       }),
     ]).start();
 
-    // Navigate to next screen after 3 seconds
-    const timer = setTimeout(() => {
-      onFinish();
-    }, 3000);
+    // Only auto-navigate if not loading (checking auth)
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        onFinish();
+      }, 3000);
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
 
   return (
     <LinearGradient

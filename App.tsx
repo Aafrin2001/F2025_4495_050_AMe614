@@ -11,7 +11,7 @@ import ScheduleCheckScreen from './src/screens/ScheduleCheckScreen';
 import AIChatScreen from './src/screens/AIChatScreen';
 import ChatSelectionScreen from './src/screens/ChatSelectionScreen';
 import VoiceChatScreen from './src/screens/VoiceChatScreen';
-import ActivitiesScreen from './src/screens/ActivitiesScreen';
+import ActivityScreen from './src/screens/ActivityScreen';
 import WalkingTrackerScreen from './src/screens/WalkingTrackerScreen';
 import StretchingScreen from './src/screens/StretchingScreen';
 import BreathingScreen from './src/screens/BreathingScreen';
@@ -29,31 +29,74 @@ type Screen = 'splash' | 'onboarding' | 'auth' | 'main' | 'healthMonitoring' | '
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [user, setUser] = useState<User | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Check for existing authentication on app start
+  // Check for existing authentication on app start and listen for auth changes
   useEffect(() => {
-    const checkAuth = async () => {
-      const { user: currentUser } = await auth.getCurrentUser();
-      if (currentUser) {
-        // Convert Supabase user to our User type
+    const initializeAuth = async () => {
+      try {
+        // Check for existing session
+        const { data, error } = await auth.getSession();
+        
+        if (data?.session?.user && !error) {
+          // User is already logged in, convert to our User type
+          const userData: User = {
+            id: data.session.user.id,
+            firstName: data.session.user.user_metadata?.firstName || '',
+            lastName: data.session.user.user_metadata?.lastName || '',
+            email: data.session.user.email || '',
+            phoneNumber: data.session.user.user_metadata?.phoneNumber,
+            userType: data.session.user.user_metadata?.userType || 'hire'
+          };
+          setUser(userData);
+          // Skip splash and onboarding, go directly to main screen
+          setCurrentScreen('main');
+        } else {
+          // No existing session, proceed with normal flow
+          setCurrentScreen('onboarding');
+        }
+      } catch (error) {
+        console.error('Error checking auth session:', error);
+        // On error, proceed with normal flow
+        setCurrentScreen('onboarding');
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User signed in
         const userData: User = {
-          id: currentUser.id,
-          firstName: currentUser.user_metadata?.firstName || '',
-          lastName: currentUser.user_metadata?.lastName || '',
-          email: currentUser.email || '',
-          phoneNumber: currentUser.user_metadata?.phoneNumber,
-          userType: currentUser.user_metadata?.userType || 'hire'
+          id: session.user.id,
+          firstName: session.user.user_metadata?.firstName || '',
+          lastName: session.user.user_metadata?.lastName || '',
+          email: session.user.email || '',
+          phoneNumber: session.user.user_metadata?.phoneNumber,
+          userType: session.user.user_metadata?.userType || 'hire'
         };
         setUser(userData);
         setCurrentScreen('main');
+      } else if (event === 'SIGNED_OUT') {
+        // User signed out
+        setUser(null);
+        setCurrentScreen('auth');
       }
+    });
+
+    return () => {
+      subscription.unsubscribe();
     };
-    
-    checkAuth();
   }, []);
 
   const handleSplashFinish = () => {
-    setCurrentScreen('onboarding');
+    // Only proceed to onboarding if we're not checking auth
+    if (!isCheckingAuth) {
+      setCurrentScreen('onboarding');
+    }
   };
 
   const handleOnboardingFinish = () => {
@@ -153,6 +196,11 @@ export default function App() {
   };
 
   const renderScreen = () => {
+    // Show splash screen while checking authentication
+    if (isCheckingAuth) {
+      return <SplashScreen onFinish={handleSplashFinish} isLoading={true} />;
+    }
+
     switch (currentScreen) {
       case 'splash':
         return <SplashScreen onFinish={handleSplashFinish} />;
@@ -191,8 +239,9 @@ export default function App() {
         return <VoiceChatScreen onBack={handleBackToMain} />;
       case 'activities':
         return (
-          <ActivitiesScreen 
-            onBack={handleBackToMain}
+          <ActivityScreen 
+            onBack={handleBackToMain} 
+            user={user}
             onNavigateToWalking={handleNavigateToWalking}
             onNavigateToStretching={handleNavigateToStretching}
             onNavigateToBreathing={handleNavigateToBreathing}
@@ -220,7 +269,7 @@ export default function App() {
       case 'numberSequence':
         return <NumberSequenceScreen onBack={handleActivities} onComplete={() => {}} />;
       case 'medication':
-        return <MedicationScreen onBack={handleBackToMain} />;
+        return <MedicationScreen onBack={handleBackToMain} user={user} />;
       case 'adminDashboard':
         return <AdminDashboardScreen onBack={handleBackToMain} />;
       case 'settings':

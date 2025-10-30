@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { User } from './src/types';
 import { auth } from './src/lib/supabase';
+import { FontSizeProvider } from './src/contexts/FontSizeContext';
+import { LanguageProvider } from './src/contexts/LanguageContext';
 import SplashScreen from './src/screens/SplashScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AuthScreen from './src/screens/AuthScreen';
@@ -280,9 +282,11 @@ export default function App() {
   };
 
   return (
-    <>
-      <StatusBar style="auto" />
-      {renderScreen()}
-    </>
+    <LanguageProvider>
+      <FontSizeProvider>
+        <StatusBar style="auto" />
+        {renderScreen()}
+      </FontSizeProvider>
+    </LanguageProvider>
   );
 }

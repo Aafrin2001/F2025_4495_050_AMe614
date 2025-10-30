@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
+import { useFontSize } from '../contexts/FontSizeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface MainScreenProps {
   user: User | null;
@@ -32,6 +34,10 @@ const MainScreen: React.FC<MainScreenProps> = ({
   onViewJobs,
   onHealthMonitoring
 }) => {
+  const { getFontSize } = useFontSize();
+  const { t } = useLanguage();
+  const styles = MainScreenStyles(getFontSize);
+  
   // For this demo, we'll show all features
   const showAsEmployer = true;
   const showAsProvider = true;
@@ -73,7 +79,7 @@ const MainScreen: React.FC<MainScreenProps> = ({
             <Ionicons name="settings-outline" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{t('main.logout')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -81,10 +87,10 @@ const MainScreen: React.FC<MainScreenProps> = ({
       <ScrollView style={styles.content}>
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>
-            Welcome{user?.firstName ? ` ${user.firstName}` : ''} to EAi!
+            {t('main.welcome')}{user?.firstName ? ` ${user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)}` : ''}!
           </Text>
               <Text style={styles.welcomeSubtitle}>
-                AI-powered health companion
+                {t('main.ai_companion')}
               </Text>
         </View>
 
@@ -92,59 +98,58 @@ const MainScreen: React.FC<MainScreenProps> = ({
               {showAsEmployer && (
                 <TouchableOpacity style={[styles.featureCard, cardWidth === '100%' ? styles.fullWidthCard : styles.halfWidthCard]} onPress={onHealthMonitoring}>
                   <Ionicons name="heart-outline" size={32} color="#FFFFFF" style={styles.featureIcon} />
-                  <Text style={styles.featureTitle}>Monitor</Text>
+                  <Text style={styles.featureTitle}>{t('main.monitor')}</Text>
                 </TouchableOpacity>
               )}
 
               {showAsProvider && (
                 <TouchableOpacity style={[styles.featureCard, cardWidth === '100%' ? styles.fullWidthCard : styles.halfWidthCard]} onPress={onOfferSkills}>
                   <Ionicons name="fitness-outline" size={32} color="#FFFFFF" style={styles.featureIcon} />
-                  <Text style={styles.featureTitle}>Activities</Text>
+                  <Text style={styles.featureTitle}>{t('main.activities')}</Text>
                 </TouchableOpacity>
               )}
 
               {showAsEmployer && (
                 <TouchableOpacity style={[styles.featureCard, cardWidth === '100%' ? styles.fullWidthCard : styles.halfWidthCard]} onPress={onCreateJob}>
                   <Ionicons name="medical-outline" size={32} color="#FFFFFF" style={styles.featureIcon} />
-                  <Text style={styles.featureTitle}>Medication</Text>
+                  <Text style={styles.featureTitle}>{t('main.medication')}</Text>
                 </TouchableOpacity>
               )}
 
               {showAsProvider && (
                 <TouchableOpacity style={[styles.featureCard, cardWidth === '100%' ? styles.fullWidthCard : styles.halfWidthCard]} onPress={onViewJobs}>
                   <Ionicons name="analytics-outline" size={32} color="#FFFFFF" style={styles.featureIcon} />
-                  <Text style={styles.featureTitle}>Dashboard</Text>
+                  <Text style={styles.featureTitle}>{t('main.dashboard')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            <View style={styles.ctaCard}>
-              <Text style={styles.ctaTitle}>Chat with AI</Text>
+            <TouchableOpacity 
+              style={styles.ctaCard}
+              onPress={showAsEmployer ? onFindServices : onOfferSkills}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.ctaTitle}>{t('main.chat_ai')}</Text>
               <Text style={styles.ctaDescription}>
-                {showAsEmployer && showAsProvider 
-                  ? 'Let AI make things easy'
-                  : showAsEmployer 
-                    ? 'Let AI make things easy'
-                    : 'Let AI make things easy'
-                }
+                {t('main.ai_easy')}
               </Text>
           {showAsEmployer && (
-            <TouchableOpacity style={styles.ctaButton} onPress={onFindServices}>
-                  <Text style={styles.ctaButtonText}>Chat with AI</Text>
-            </TouchableOpacity>
+            <View style={styles.ctaButton}>
+                  <Text style={styles.ctaButtonText}>{t('main.chat_ai')}</Text>
+            </View>
           )}
           {showAsProvider && !showAsEmployer && (
-            <TouchableOpacity style={styles.ctaButton} onPress={onOfferSkills}>
-              <Text style={styles.ctaButtonText}>Emergency Support</Text>
-            </TouchableOpacity>
+            <View style={styles.ctaButton}>
+              <Text style={styles.ctaButtonText}>{t('main.chat_ai')}</Text>
+            </View>
           )}
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );
 };
 
-const styles = StyleSheet.create({
+const MainScreenStyles = (getFontSize: (base: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logo: {
-    fontSize: 28,
+    fontSize: getFontSize(28),
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
@@ -180,7 +185,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: getFontSize(14),
     fontWeight: '500',
   },
   content: {
@@ -195,13 +200,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeTitle: {
-    fontSize: 24,
+    fontSize: getFontSize(24),
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 10,
   },
   welcomeSubtitle: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
@@ -233,17 +238,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   featureTitle: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
   },
   featureDescription: {
-    fontSize: 12,
+    fontSize: getFontSize(12),
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: getFontSize(16),
   },
   ctaCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -253,13 +258,13 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   ctaTitle: {
-    fontSize: 20,
+    fontSize: getFontSize(20),
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 10,
   },
   ctaDescription: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginBottom: 20,
@@ -272,7 +277,7 @@ const styles = StyleSheet.create({
   },
   ctaButtonText: {
     color: '#667eea',
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
   },
 });

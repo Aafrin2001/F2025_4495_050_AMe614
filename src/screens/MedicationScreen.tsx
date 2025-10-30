@@ -884,13 +884,15 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 15,
   },
   backButton: {
     marginRight: 10,

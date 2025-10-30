@@ -13,9 +13,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-
-
-
 interface ActivitiesScreenProps {
   onBack: () => void;
   onNavigateToWalking: () => void;
@@ -39,7 +36,6 @@ interface Activity {
   points: number;
 }
 
-
 interface Game {
   id: string;
   name: string;
@@ -48,7 +44,6 @@ interface Game {
   color: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
 }
-
 
 const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({ 
   onBack, 
@@ -198,13 +193,11 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
     }
   };
 
-
   const handleAddActivity = () => {
     if (!newActivity.name || !newActivity.duration) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
-
 
     const activity: Activity = {
       id: Date.now().toString(),
@@ -217,13 +210,11 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
       points: Math.max(5, parseInt(newActivity.duration) * 2),
     };
 
-
     setActivities([...activities, activity]);
     setNewActivity({ name: '', description: '', duration: '' });
     setShowAddActivity(false);
     Alert.alert('Success', 'Activity added successfully!');
   };
-
 
   const handleGamePress = (game: Game) => {
     // Navigate to specific game page
@@ -252,9 +243,6 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
         break;
     }
   };
-
-
-
 
   const renderActivity = (activity: Activity) => (
     <TouchableOpacity
@@ -290,8 +278,6 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
       </View>
     </TouchableOpacity>
   );
-
-
 
   const renderGame = (game: Game) => (
     <TouchableOpacity
@@ -350,8 +336,6 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
             </View>
           </View>
         </View>
-
-
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

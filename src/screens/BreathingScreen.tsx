@@ -1,307 +1,236 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Modal,
-  TextInput,
   Alert,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-interface ActivitiesScreenProps {
+interface BreathingScreenProps {
   onBack: () => void;
-  onNavigateToWalking: () => void;
-  onNavigateToStretching: () => void;
-  onNavigateToBreathing: () => void;
-  onNavigateToSleep: () => void;
-  onNavigateToMemoryMatch: () => void;
-  onNavigateToWordSearch: () => void;
-  onNavigateToPuzzlePieces: () => void;
-  onNavigateToNumberSequence: () => void;
+  onComplete: (data: BreathingData) => void;
 }
 
-interface Activity {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  duration: number; // in minutes
+interface BreathingData {
+  cyclesCompleted: number;
+  totalDuration: number; // in minutes
   completed: boolean;
-  points: number;
 }
 
-interface Game {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-}
+type BreathPhase = 'inhale' | 'hold' | 'exhale' | 'pause';
 
-const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({ 
-  onBack, 
-  onNavigateToWalking, 
-  onNavigateToStretching, 
-  onNavigateToBreathing, 
-  onNavigateToSleep,
-  onNavigateToMemoryMatch,
-  onNavigateToWordSearch,
-  onNavigateToPuzzlePieces,
-  onNavigateToNumberSequence
-}) => {
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: '1',
-      name: 'Morning Walk',
-      description: 'Take a gentle 15-minute walk around your neighborhood',
-      icon: 'walk-outline',
-      color: '#4CAF50',
-      duration: 15,
-      completed: false,
-      points: 10,
-    },
-    {
-      id: '2',
-      name: 'Stretching',
-      description: 'Simple stretching exercises for flexibility',
-      icon: 'fitness-outline',
-      color: '#2196F3',
-      duration: 10,
+const BreathingScreen: React.FC<BreathingScreenProps> = ({ onBack, onComplete }) => {
+  const [isBreathing, setIsBreathing] = useState(false);
+  const [breathPhase, setBreathPhase] = useState<BreathPhase>('inhale');
+  const [cycleCount, setCycleCount] = useState(0);
+  const [totalCycles, setTotalCycles] = useState(5);
+  const [phaseTime, setPhaseTime] = useState(0);
+  const [showInstructions, setShowInstructions] = useState(false);
+  
+  const breathingAnim = useRef(new Animated.Value(1)).current;
+  const phaseTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const phaseDurations = {
+    inhale: 4, // seconds
+    hold: 2,
+    exhale: 4,
+    pause: 1
+  };
+
+  const phaseInstructions = {
+    inhale: 'Breathe in slowly through your nose',
+    hold: 'Hold your breath gently',
+    exhale: 'Breathe out slowly through your mouth',
+    pause: 'Rest and prepare for the next breath'
+  };
+
+  useEffect(() => {
+    if (isBreathing) {
+      startBreathingCycle();
+    } else {
+      stopBreathingCycle();
+    }
+
+    return () => {
+      if (phaseTimer.current) clearInterval(phaseTimer.current);
+    };
+  }, [isBreathing]);
+
+  const startBreathingCycle = () => {
+    setBreathPhase('inhale');
+    setPhaseTime(phaseDurations.inhale);
+    animateBreathing();
+  };
+
+  const animateBreathing = () => {
+    if (!isBreathing) return;
+
+    const currentPhase = breathPhase;
+    const duration = phaseDurations[currentPhase] * 1000;
+
+    // Animate the breathing circle
+    if (currentPhase === 'inhale') {
+      Animated.timing(breathingAnim, {
+        toValue: 1.3,
+        duration: duration,
+        useNativeDriver: true,
+      }).start();
+    } else if (currentPhase === 'exhale') {
+      Animated.timing(breathingAnim, {
+        toValue: 1,
+        duration: duration,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // Set up phase timer
+    phaseTimer.current = setInterval(() => {
+      setPhaseTime((prev) => {
+        if (prev <= 1) {
+          nextPhase();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const nextPhase = () => {
+    if (phaseTimer.current) clearInterval(phaseTimer.current);
+
+    switch (breathPhase) {
+      case 'inhale':
+        setBreathPhase('hold');
+        setPhaseTime(phaseDurations.hold);
+        break;
+      case 'hold':
+        setBreathPhase('exhale');
+        setPhaseTime(phaseDurations.exhale);
+        break;
+      case 'exhale':
+        setBreathPhase('pause');
+        setPhaseTime(phaseDurations.pause);
+        break;
+      case 'pause':
+        setCycleCount(prev => {
+          if (prev + 1 >= totalCycles) {
+            completeBreathing();
+            return prev;
+          }
+          setBreathPhase('inhale');
+          setPhaseTime(phaseDurations.inhale);
+          return prev + 1;
+        });
+        break;
+    }
+
+    // Continue animation for next phase
+    setTimeout(() => {
+      if (isBreathing) {
+        animateBreathing();
+      }
+    }, 100);
+  };
+
+  const completeBreathing = () => {
+    setIsBreathing(false);
+    const totalDuration = (totalCycles * (phaseDurations.inhale + phaseDurations.hold + phaseDurations.exhale + phaseDurations.pause)) / 60;
+
+    const breathingData: BreathingData = {
+      cyclesCompleted: totalCycles,
+      totalDuration: Math.round(totalDuration * 10) / 10,
       completed: true,
-      points: 5,
-    },
-    {
-      id: '3',
-      name: 'Deep Breathing',
-      description: '5 minutes of deep breathing exercises',
-      icon: 'leaf-outline',
-      color: '#FF9800',
-      duration: 5,
-      completed: false,
-      points: 5,
-    },
-    {
-      id: '4',
-      name: 'Sleep Cycle',
-      description: 'Track your sleep patterns and quality',
-      icon: 'moon-outline',
-      color: '#9C27B0',
-      duration: 8,
-      completed: false,
-      points: 15,
-    },
-  ]);
-
-  const [games, setGames] = useState<Game[]>([
-    {
-      id: '1',
-      name: 'Memory Match',
-      description: 'Match pairs of cards to improve memory',
-      icon: 'brain-outline',
-      color: '#E91E63',
-      difficulty: 'Easy',
-    },
-    {
-      id: '2',
-      name: 'Word Search',
-      description: 'Find hidden words in a grid',
-      icon: 'search-outline',
-      color: '#3F51B5',
-      difficulty: 'Medium',
-    },
-    {
-      id: '3',
-      name: 'Puzzle Pieces',
-      description: 'Complete jigsaw puzzles',
-      icon: 'extension-puzzle-outline',
-      color: '#FF5722',
-      difficulty: 'Easy',
-    },
-    {
-      id: '4',
-      name: 'Number Sequence',
-      description: 'Complete number patterns',
-      icon: 'calculator-outline',
-      color: '#607D8B',
-      difficulty: 'Medium',
-    },
-  ]);
-
-  const [showAddActivity, setShowAddActivity] = useState(false);
-  const [newActivity, setNewActivity] = useState({
-    name: '',
-    description: '',
-    duration: '',
-  });
-
-  const [totalPoints, setTotalPoints] = useState(25); // Starting points
-
-  const handleActivityPress = (id: string) => {
-    const activity = activities.find(a => a.id === id);
-    if (!activity) return;
-
-    // Navigate to specific activity page
-    switch (id) {
-      case '1': // Morning Walk
-        onNavigateToWalking();
-        break;
-      case '2': // Stretching
-        onNavigateToStretching();
-        break;
-      case '3': // Deep Breathing
-        onNavigateToBreathing();
-        break;
-      case '4': // Sleep Cycle
-        onNavigateToSleep();
-        break;
-      default:
-        // For custom activities, just toggle completion
-        handleActivityComplete(id);
-        break;
-    }
-  };
-
-  const handleActivityComplete = (id: string) => {
-    setActivities(activities.map(activity =>
-      activity.id === id 
-        ? { ...activity, completed: !activity.completed }
-        : activity
-    ));
-    
-    const activity = activities.find(a => a.id === id);
-    if (activity && !activity.completed) {
-      setTotalPoints(prev => prev + activity.points);
-      Alert.alert('Great Job!', `You earned ${activity.points} points!`);
-    }
-  };
-
-  const handleActivityCompleteFromPage = (activityData: any) => {
-    // This will be called when user completes an activity from the individual page
-    const activity = activities.find(a => a.id === activityData.id);
-    if (activity) {
-      setActivities(activities.map(a =>
-        a.id === activityData.id ? { ...a, completed: true } : a
-      ));
-      setTotalPoints(prev => prev + activity.points);
-    }
-  };
-
-  const handleAddActivity = () => {
-    if (!newActivity.name || !newActivity.duration) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
-    const activity: Activity = {
-      id: Date.now().toString(),
-      name: newActivity.name,
-      description: newActivity.description,
-      icon: 'add-circle-outline',
-      color: '#667eea',
-      duration: parseInt(newActivity.duration),
-      completed: false,
-      points: Math.max(5, parseInt(newActivity.duration) * 2),
     };
 
-    setActivities([...activities, activity]);
-    setNewActivity({ name: '', description: '', duration: '' });
-    setShowAddActivity(false);
-    Alert.alert('Success', 'Activity added successfully!');
+    Alert.alert(
+      'Breathing Complete!',
+      `Excellent! You completed ${totalCycles} deep breathing cycles in ${Math.round(totalDuration * 10) / 10} minutes.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            setIsBreathing(false);
+            setCycleCount(0);
+            setBreathPhase('inhale');
+            setPhaseTime(0);
+          }
+        },
+        {
+          text: 'Complete Activity',
+          onPress: () => {
+            onComplete(breathingData);
+            onBack();
+          }
+        }
+      ]
+    );
   };
 
-  const handleGamePress = (game: Game) => {
-    // Navigate to specific game page
-    switch (game.id) {
-      case '1': // Memory Match
-        onNavigateToMemoryMatch();
-        break;
-      case '2': // Word Search
-        onNavigateToWordSearch();
-        break;
-      case '3': // Puzzle Pieces
-        onNavigateToPuzzlePieces();
-        break;
-      case '4': // Number Sequence
-        onNavigateToNumberSequence();
-        break;
-      default:
-        Alert.alert(
-          game.name,
-          `${game.description}\n\nDifficulty: ${game.difficulty}\n\nThis game will help improve your cognitive function and keep your mind sharp!`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Play Now', onPress: () => Alert.alert('Game Started', 'Game functionality will be implemented in the full version!') }
-          ]
-        );
-        break;
+  const stopBreathingCycle = () => {
+    if (phaseTimer.current) clearInterval(phaseTimer.current);
+    breathingAnim.stopAnimation();
+    breathingAnim.setValue(1);
+  };
+
+  const startBreathing = () => {
+    setIsBreathing(true);
+    setCycleCount(0);
+    setBreathPhase('inhale');
+    setPhaseTime(phaseDurations.inhale);
+  };
+
+  const stopBreathing = () => {
+    Alert.alert(
+      'Stop Breathing Exercise?',
+      'Are you sure you want to stop? Your progress will be saved.',
+      [
+        { text: 'Continue', style: 'cancel' },
+        {
+          text: 'Stop',
+          onPress: () => {
+            setIsBreathing(false);
+            const completedCycles = cycleCount + (breathPhase === 'pause' ? 1 : 0);
+            const totalDuration = (completedCycles * (phaseDurations.inhale + phaseDurations.hold + phaseDurations.exhale + phaseDurations.pause)) / 60;
+
+            const breathingData: BreathingData = {
+              cyclesCompleted: completedCycles,
+              totalDuration: Math.round(totalDuration * 10) / 10,
+              completed: true,
+            };
+
+            onComplete(breathingData);
+            onBack();
+          }
+        }
+      ]
+    );
+  };
+
+  const getPhaseColor = () => {
+    switch (breathPhase) {
+      case 'inhale': return '#4CAF50';
+      case 'hold': return '#FF9800';
+      case 'exhale': return '#2196F3';
+      case 'pause': return '#9C27B0';
+      default: return '#4CAF50';
     }
   };
 
-  const renderActivity = (activity: Activity) => (
-    <TouchableOpacity
-      key={activity.id}
-      style={[
-        styles.activityCard,
-        { borderLeftColor: activity.color },
-        activity.completed && styles.completedCard
-      ]}
-      onPress={() => handleActivityPress(activity.id)}
-    >
-      <View style={styles.activityHeader}>
-        <View style={styles.activityIconContainer}>
-          <Ionicons name={activity.icon as any} size={24} color={activity.color} />
-        </View>
-        <View style={styles.activityInfo}>
-          <Text style={[styles.activityName, activity.completed && styles.completedText]}>
-            {activity.name}
-          </Text>
-          <Text style={styles.activityDescription}>{activity.description}</Text>
-          <View style={styles.activityMeta}>
-            <Text style={styles.activityDuration}>{activity.duration} min</Text>
-            <Text style={styles.activityPoints}>{activity.points} pts</Text>
-          </View>
-        </View>
-        <View style={styles.activityStatus}>
-          {activity.completed ? (
-            <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
-          ) : (
-            <Ionicons name="ellipse-outline" size={28} color="rgba(255, 255, 255, 0.5)" />
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderGame = (game: Game) => (
-    <TouchableOpacity
-      key={game.id}
-      style={[styles.gameCard, { borderLeftColor: game.color }]}
-      onPress={() => handleGamePress(game)}
-    >
-      <View style={styles.gameHeader}>
-        <View style={styles.gameIconContainer}>
-          <Ionicons name={game.icon as any} size={24} color={game.color} />
-        </View>
-        <View style={styles.gameInfo}>
-          <Text style={styles.gameName}>{game.name}</Text>
-          <Text style={styles.gameDescription}>{game.description}</Text>
-          <View style={styles.gameMeta}>
-            <Text style={[styles.difficultyBadge, { backgroundColor: game.color }]}>
-              {game.difficulty}
-            </Text>
-          </View>
-        </View>
-        <Ionicons name="play-circle-outline" size={24} color={game.color} />
-      </View>
-    </TouchableOpacity>
-  );
+  const getPhaseIcon = () => {
+    switch (breathPhase) {
+      case 'inhale': return 'arrow-up';
+      case 'hold': return 'pause';
+      case 'exhale': return 'arrow-down';
+      case 'pause': return 'ellipse';
+      default: return 'arrow-up';
+    }
+  };
 
   return (
     <LinearGradient
@@ -314,130 +243,132 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Activities</Text>
+        <Text style={styles.headerTitle}>Deep Breathing</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Today's Progress</Text>
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{activities.filter(a => a.completed).length}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
+      <View style={styles.content}>
+        {!isBreathing ? (
+          <View style={styles.startContainer}>
+            <View style={styles.instructionCard}>
+              <Ionicons name="leaf" size={48} color="#FF9800" />
+              <Text style={styles.instructionTitle}>Ready to Breathe?</Text>
+              <Text style={styles.instructionText}>
+                Follow the guided breathing exercise to relax and reduce stress.
+              </Text>
+              <Text style={styles.durationText}>
+                {totalCycles} cycles • {Math.round((totalCycles * 11) / 60 * 10) / 10} minutes
+              </Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{totalPoints}</Text>
-              <Text style={styles.statLabel}>Points</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{activities.length}</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-          </View>
-        </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Health Activities</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowAddActivity(true)}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>Add</Text>
+            <View style={styles.cycleSelector}>
+              <Text style={styles.cycleLabel}>Number of cycles:</Text>
+              <View style={styles.cycleButtons}>
+                {[3, 5, 7, 10].map((cycles) => (
+                  <TouchableOpacity
+                    key={cycles}
+                    style={[
+                      styles.cycleButton,
+                      totalCycles === cycles && styles.cycleButtonSelected
+                    ]}
+                    onPress={() => setTotalCycles(cycles)}
+                  >
+                    <Text style={[
+                      styles.cycleButtonText,
+                      totalCycles === cycles && styles.cycleButtonTextSelected
+                    ]}>
+                      {cycles}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.startButton} onPress={startBreathing}>
+              <Ionicons name="play" size={32} color="#FFFFFF" />
+              <Text style={styles.buttonText}>Start Breathing</Text>
             </TouchableOpacity>
           </View>
-          
-          <View style={styles.activitiesList}>
-            {activities.map(renderActivity)}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Brain Games</Text>
-          <Text style={styles.sectionSubtitle}>Keep your mind sharp with these fun games</Text>
-          
-          <View style={styles.gamesList}>
-            {games.map(renderGame)}
-          </View>
-        </View>
-      </ScrollView>
-
-
-      {/* Add Activity Modal */}
-      {showAddActivity && (
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={showAddActivity}
-          onRequestClose={() => setShowAddActivity(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add New Activity</Text>
-              
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Activity Name</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={newActivity.name}
-                  onChangeText={(text) => setNewActivity({...newActivity, name: text})}
-                  placeholder="e.g., Evening Stroll"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
+        ) : (
+          <View style={styles.breathingContainer}>
+            <View style={styles.progressCard}>
+              <Text style={styles.progressText}>
+                Cycle {cycleCount + 1} of {totalCycles}
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${((cycleCount + 1) / totalCycles) * 100}%` }
+                  ]} 
                 />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Description (Optional)</Text>
-                <TextInput
-                  style={[styles.modalInput, styles.notesInput]}
-                  value={newActivity.description}
-                  onChangeText={(text) => setNewActivity({...newActivity, description: text})}
-                  placeholder="Describe the activity..."
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Duration (minutes)</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  value={newActivity.duration}
-                  onChangeText={(text) => setNewActivity({...newActivity, duration: text})}
-                  placeholder="15"
-                  placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={() => setShowAddActivity(false)}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.saveButton]}
-                  onPress={handleAddActivity}
-                >
-                  <Text style={styles.saveButtonText}>Add Activity</Text>
-                </TouchableOpacity>
               </View>
             </View>
+
+            <View style={styles.breathingCircleContainer}>
+              <Animated.View 
+                style={[
+                  styles.breathingCircle, 
+                  { 
+                    transform: [{ scale: breathingAnim }],
+                    borderColor: getPhaseColor()
+                  }
+                ]}
+              >
+                <Ionicons 
+                  name={getPhaseIcon() as any} 
+                  size={48} 
+                  color={getPhaseColor()} 
+                />
+              </Animated.View>
+            </View>
+
+            <View style={styles.phaseInfo}>
+              <Text style={[styles.phaseText, { color: getPhaseColor() }]}>
+                {breathPhase.toUpperCase()}
+              </Text>
+              <Text style={styles.phaseInstruction}>
+                {phaseInstructions[breathPhase]}
+              </Text>
+              <Text style={styles.phaseTimer}>{phaseTime}s</Text>
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.stopButton} onPress={stopBreathing}>
+                <Ionicons name="stop" size={24} color="#FFFFFF" />
+                <Text style={styles.stopButtonText}>Stop</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </Modal>
-      )}
+        )}
+
+        {!isBreathing && (
+          <TouchableOpacity 
+            style={styles.instructionsToggle}
+            onPress={() => setShowInstructions(!showInstructions)}
+          >
+            <Text style={styles.instructionsToggleText}>
+              {showInstructions ? 'Hide' : 'Show'} Instructions
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {showInstructions && !isBreathing && (
+          <View style={styles.instructionsCard}>
+            <Text style={styles.instructionsTitle}>How to Practice Deep Breathing:</Text>
+            <Text style={styles.instructionItem}>1. Find a comfortable seated position</Text>
+            <Text style={styles.instructionItem}>2. Place one hand on your chest, one on your belly</Text>
+            <Text style={styles.instructionItem}>3. Breathe in slowly through your nose (4 seconds)</Text>
+            <Text style={styles.instructionItem}>4. Hold your breath gently (2 seconds)</Text>
+            <Text style={styles.instructionItem}>5. Breathe out slowly through your mouth (4 seconds)</Text>
+            <Text style={styles.instructionItem}>6. Rest briefly before the next breath (1 second)</Text>
+            <Text style={styles.instructionItem}>7. Repeat for the selected number of cycles</Text>
+          </View>
+        )}
+      </View>
     </LinearGradient>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -467,234 +398,195 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    justifyContent: 'center',
   },
-  summaryCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 20,
-    padding: 25,
-    marginBottom: 30,
-  },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  summaryStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
+  startContainer: {
     alignItems: 'center',
   },
-  statNumber: {
+  instructionCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  instructionTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 5,
+    marginTop: 15,
+    marginBottom: 10,
   },
-  statLabel: {
-    fontSize: 14,
+  instructionText: {
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 10,
   },
-  section: {
+  durationText: {
+    fontSize: 14,
+    color: '#FF9800',
+    fontWeight: '600',
+  },
+  cycleSelector: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
     marginBottom: 30,
+    width: '100%',
   },
-  sectionHeader: {
+  cycleLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  cycleButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-around',
   },
-  sectionTitle: {
-    fontSize: 22,
+  cycleButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  cycleButtonSelected: {
+    backgroundColor: '#FF9800',
+  },
+  cycleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cycleButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  startButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 50,
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  breathingContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  progressCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 30,
+    width: '100%',
+  },
+  progressText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FF9800',
+  },
+  breathingCircleContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  breathingCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  phaseInfo: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  phaseText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  phaseInstruction: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  phaseTimer: {
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 20,
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  addButton: {
+  stopButton: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 25,
+    paddingHorizontal: 30,
+    paddingVertical: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
   },
-  addButtonText: {
+  stopButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 5,
   },
-  activitiesList: {
-    gap: 15,
+  instructionsToggle: {
+    marginTop: 20,
+    alignSelf: 'center',
   },
-  activityCard: {
+  instructionsToggleText: {
+    color: '#FF9800',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  instructionsCard: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 15,
     padding: 20,
-    borderLeftWidth: 4,
+    marginTop: 20,
   },
-  completedCard: {
-    opacity: 0.7,
-  },
-  activityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activityIconContainer: {
-    marginRight: 15,
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityName: {
+  instructionsTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 5,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-    opacity: 0.7,
-  },
-  activityDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 8,
-  },
-  activityMeta: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  activityDuration: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  activityPoints: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  activityStatus: {
-    marginLeft: 10,
-  },
-  gamesList: {
-    gap: 15,
-  },
-  gameCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 15,
-    padding: 20,
-    borderLeftWidth: 4,
-  },
-  gameHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gameIconContainer: {
-    marginRight: 15,
-  },
-  gameInfo: {
-    flex: 1,
-  },
-  gameName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 5,
-  },
-  gameDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 8,
-  },
-  gameMeta: {
-    flexDirection: 'row',
-  },
-  difficultyBadge: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 20,
-    padding: 30,
-    width: '100%',
-    maxWidth: 350,
-  },
-  modalTitle: {
-    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 20,
-    textAlign: 'center',
+    marginBottom: 15,
   },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  instructionItem: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
-  },
-  modalInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    color: '#FFFFFF',
-  },
-  notesInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  saveButton: {
-    backgroundColor: '#FFFFFF',
-  },
-  modalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButtonText: {
-    color: '#667eea',
-    fontSize: 16,
-    fontWeight: '600',
+    lineHeight: 20,
   },
 });
 
-
-
-
-export default ActivitiesScreen;
+export default BreathingScreen;

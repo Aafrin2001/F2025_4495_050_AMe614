@@ -7,13 +7,16 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { auth } from '../lib/supabase';
+import { AuthError, User } from '../types';
 
 interface AuthScreenProps {
-  onLogin: () => void;
+  onLogin: (user: User) => void;
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
@@ -25,13 +28,44 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [userType, setUserType] = React.useState<'hire' | 'offer'>('hire');
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleAuth = () => {
+  const handleAuth = async () => {
     if (isLogin) {
       // Login validation
       if (!email || !password) {
         Alert.alert('Error', 'Please fill in email and password');
         return;
+      }
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await auth.signIn(email, password);
+        
+        if (error) {
+          Alert.alert('Login Failed', error.message || 'An error occurred during login');
+          return;
+        }
+        
+        if (data?.user) {
+          // Convert Supabase user to our User type
+          const userData: User = {
+            id: data.user.id,
+            firstName: data.user.user_metadata?.firstName || '',
+            lastName: data.user.user_metadata?.lastName || '',
+            email: data.user.email || '',
+            phoneNumber: data.user.user_metadata?.phoneNumber,
+            userType: data.user.user_metadata?.userType || 'hire'
+          };
+          
+          Alert.alert('Success', 'Login successful!', [
+            { text: 'OK', onPress: () => onLogin(userData) }
+          ]);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'An unexpected error occurred during login');
+      } finally {
+        setIsLoading(false);
       }
     } else {
       // Signup validation
@@ -49,12 +83,36 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         Alert.alert('Error', 'Password must be at least 6 characters');
         return;
       }
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await auth.signUp(email, password, {
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || undefined,
+          userType
+        });
+        
+        if (error) {
+          Alert.alert('Registration Failed', error.message || 'An error occurred during registration');
+          return;
+        }
+        
+        if (data?.user) {
+          Alert.alert(
+            'Registration Successful', 
+            'Please check your email to verify your account before signing in.',
+            [
+              { text: 'OK', onPress: () => setIsLogin(true) }
+            ]
+          );
+        }
+      } catch (error) {
+        Alert.alert('Error', 'An unexpected error occurred during registration');
+      } finally {
+        setIsLoading(false);
+      }
     }
-    
-    // For now, just simulate successful authentication
-    Alert.alert('Success', `${isLogin ? 'Login' : 'Registration'} successful!`, [
-      { text: 'OK', onPress: onLogin }
-    ]);
   };
 
   return (
@@ -218,10 +276,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </>
           )}
 
-          <TouchableOpacity style={styles.authButton} onPress={handleAuth}>
-            <Text style={styles.authButtonText}>
-              {isLogin ? 'Sign In' : 'Create Account'}
-            </Text>
+          <TouchableOpacity 
+            style={[styles.authButton, isLoading && styles.authButtonDisabled]} 
+            onPress={handleAuth}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#667eea" size="small" />
+            ) : (
+              <Text style={styles.authButtonText}>
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -366,6 +432,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     alignItems: 'center',
     marginTop: 20,
+  },
+  authButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   authButtonText: {
     color: '#667eea',

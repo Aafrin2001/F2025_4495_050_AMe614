@@ -9,8 +9,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { User } from '../types';
 
 interface MainScreenProps {
+  user: User | null;
   onLogout: () => void;
   onFindServices: () => void;
   onOfferSkills: () => void;
@@ -21,6 +23,7 @@ interface MainScreenProps {
 }
 
 const MainScreen: React.FC<MainScreenProps> = ({ 
+  user,
   onLogout, 
   onFindServices, 
   onOfferSkills, 
@@ -77,7 +80,9 @@ const MainScreen: React.FC<MainScreenProps> = ({
 
       <ScrollView style={styles.content}>
         <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeTitle}>Welcome to EAi!</Text>
+          <Text style={styles.welcomeTitle}>
+            Welcome{user?.firstName ? ` ${user.firstName}` : ''} to EAi!
+          </Text>
               <Text style={styles.welcomeSubtitle}>
                 AI-powered health companion
               </Text>
@@ -112,7 +117,7 @@ const MainScreen: React.FC<MainScreenProps> = ({
                 </TouchableOpacity>
               )}
             </View>
-              {/*Can you figure this out laterZZZZ  */}
+
             <View style={styles.ctaCard}>
               <Text style={styles.ctaTitle}>Chat with AI</Text>
               <Text style={styles.ctaDescription}>

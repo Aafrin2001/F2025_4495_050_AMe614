@@ -10,129 +10,158 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+
 interface PuzzlePiecesScreenProps {
   onBack: () => void;
-  onComplete: (data: SleepData) => void;
+  onComplete: (data: GameData) => void;
 }
 
-interface SleepData {
-  bedTime: string;
-  wakeTime: string;
-  totalHours: number;
-  quality: 'Excellent' | 'Good' | 'Fair' | 'Poor';
+interface GameData {
+  score: number;
+  time: number; // in seconds
+  piecesPlaced: number;
   completed: boolean;
 }
 
-interface SleepRecord {
+interface PuzzlePiece {
   id: string;
-  date: string;
-  bedTime: string;
-  wakeTime: string;
-  totalHours: number;
-  quality: 'Excellent' | 'Good' | 'Fair' | 'Poor';
+  number: number;
+  isPlaced: boolean;
+  correctPosition: number;
+  currentPosition: number;
+  color: string;
 }
 
 const PuzzlePiecesScreen: React.FC<PuzzlePiecesScreenProps> = ({ onBack, onComplete }) => {
-  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([
-    {
-      id: '1',
-      date: '2024-01-14',
-      bedTime: '22:00',
-      wakeTime: '07:00',
-      totalHours: 9,
-      quality: 'Good',
-    },
-    {
-      id: '2',
-      date: '2024-01-13',
-      bedTime: '23:30',
-      wakeTime: '06:30',
-      totalHours: 7,
-      quality: 'Fair',
-    },
-    {
-      id: '3',
-      date: '2024-01-12',
-      bedTime: '21:45',
-      wakeTime: '06:45',
-      totalHours: 9,
-      quality: 'Excellent',
-    },
-  ]);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameCompleted, setGameCompleted] = useState(false);
+  const [puzzleSize, setPuzzleSize] = useState(3); // 3x3 grid
+  const [pieces, setPieces] = useState<PuzzlePiece[]>([]);
+  const [grid, setGrid] = useState<(PuzzlePiece | null)[]>([]);
+  const [selectedPiece, setSelectedPiece] = useState<PuzzlePiece | null>(null);
+  const [piecesPlaced, setPiecesPlaced] = useState(0);
+  const [time, setTime] = useState(0);
+  const [score, setScore] = useState(0);
+  const [moves, setMoves] = useState(0);
 
-    const [showLogSleep, setShowLogSleep] = useState(false);
-  const [newSleep, setNewSleep] = useState({
-    bedTime: '',
-    wakeTime: '',
-    quality: 'Good' as 'Excellent' | 'Good' | 'Fair' | 'Poor',
-  });
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE'];
 
-  const calculateSleepHours = (bedTime: string, wakeTime: string): number => {
-    if (!bedTime || !wakeTime) return 0;
-    
-    const [bedHour, bedMin] = bedTime.split(':').map(Number);
-    const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
-    
-    let bedMinutes = bedHour * 60 + bedMin;
-    let wakeMinutes = wakeHour * 60 + wakeMin;
-    
-    // Handle overnight sleep (wake time is next day)
-    if (wakeMinutes < bedMinutes) {
-      wakeMinutes += 24 * 60; // Add 24 hours
+  useEffect(() => {
+    if (gameStarted && !gameCompleted) {
+      const timer = setInterval(() => {
+        setTime(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(timer);
     }
-    
-    const totalMinutes = wakeMinutes - bedMinutes;
-    return Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal place
+  }, [gameStarted, gameCompleted]);
+
+  const initializeGame = () => {
+    const totalPieces = puzzleSize * puzzleSize;
+    const newPieces: PuzzlePiece[] = [];
+    const newGrid: (PuzzlePiece | null)[] = new Array(totalPieces).fill(null);
+
+    // Create pieces with numbers 1 to totalPieces
+    for (let i = 0; i < totalPieces; i++) {
+      newPieces.push({
+        id: `piece-${i}`,
+        number: i + 1,
+        isPlaced: false,
+        correctPosition: i,
+        currentPosition: -1,
+        color: colors[i % colors.length]
+      });
+    }
+
+    // Shuffle pieces
+    const shuffledPieces = newPieces.sort(() => Math.random() - 0.5);
+
+    setPieces(shuffledPieces);
+    setGrid(newGrid);
+    setGameStarted(true);
+    setGameCompleted(false);
+    setSelectedPiece(null);
+    setPiecesPlaced(0);
+    setTime(0);
+    setScore(0);
+    setMoves(0);
   };
 
-  const handleLogSleep = () => {
-    if (!newSleep.bedTime || !newSleep.wakeTime) {
-      Alert.alert('Error', 'Please fill in both bed time and wake time');
-      return;
-    }
+  const handlePieceSelect = (piece: PuzzlePiece) => {
+    if (piece.isPlaced || gameCompleted) return;
+    setSelectedPiece(piece);
+  };
 
-    const totalHours = calculateSleepHours(newSleep.bedTime, newSleep.wakeTime);
+  const handleGridPress = (position: number) => {
+    if (!selectedPiece || gameCompleted) return;
+
+    const currentGrid = [...grid];
     
-    if (totalHours <= 0) {
-      Alert.alert('Error', 'Wake time must be after bed time');
-      return;
+    // If there's already a piece at this position, swap them
+    if (currentGrid[position]) {
+      const existingPiece = currentGrid[position]!;
+      setPieces(pieces.map(p => 
+        p.id === selectedPiece.id 
+          ? { ...p, currentPosition: position }
+          : p.id === existingPiece.id
+          ? { ...p, currentPosition: -1 }
+          : p
+      ));
+    } else {
+      // Place the piece
+      setPieces(pieces.map(p => 
+        p.id === selectedPiece.id 
+          ? { ...p, currentPosition: position, isPlaced: true }
+          : p
+      ));
+      setPiecesPlaced(prev => prev + 1);
     }
 
-    if (totalHours > 16) {
-      Alert.alert('Error', 'Sleep duration seems too long. Please check your times.');
-      return;
+    // Update grid
+    currentGrid[position] = selectedPiece;
+    setGrid(currentGrid);
+    setMoves(prev => prev + 1);
+
+    // Check if piece is in correct position
+    if (position === selectedPiece.correctPosition) {
+      setScore(prev => prev + 50);
     }
 
-    const sleepData: SleepData = {
-      bedTime: newSleep.bedTime,
-      wakeTime: newSleep.wakeTime,
-      totalHours: totalHours,
-      quality: newSleep.quality,
-      completed: true,
-    };
-    // Add to records
-    const newRecord: SleepRecord = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      bedTime: newSleep.bedTime,
-      wakeTime: newSleep.wakeTime,
-      totalHours: totalHours,
-      quality: newSleep.quality,
-    };
+    setSelectedPiece(null);
 
-    setSleepRecords([newRecord, ...sleepRecords]);
-    setNewSleep({ bedTime: '', wakeTime: '', quality: 'Good' });
-    setShowLogSleep(false);
+    // Check if puzzle is complete
+    const isComplete = pieces.every(piece => 
+      piece.isPlaced && piece.currentPosition === piece.correctPosition
+    );
+
+    if (isComplete) {
+      completeGame();
+    }
+  };
+
+  const completeGame = () => {
+    setGameCompleted(true);
+    const timeBonus = Math.max(0, 300 - time);
+    const moveBonus = Math.max(0, 50 - moves);
+    const finalScore = score + timeBonus + moveBonus;
 
     Alert.alert(
-      'Sleep Logged!',
-      `You slept ${totalHours} hours with ${newSleep.quality.toLowerCase()} quality.`,
+      'Puzzle Complete!',
+      `Congratulations! You solved the puzzle!\n\nScore: ${finalScore}\nTime: ${Math.floor(time / 60)}:${(time % 60).toString().padStart(2, '0')}\nMoves: ${moves}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Play Again',
+          onPress: () => initializeGame()
+        },
         {
           text: 'Complete Activity',
           onPress: () => {
-            onComplete(sleepData);
+            const gameData: GameData = {
+              score: finalScore,
+              time: time,
+              piecesPlaced: piecesPlaced,
+              completed: true,
+            };
+            onComplete(gameData);
             onBack();
           }
         }
@@ -140,43 +169,107 @@ const PuzzlePiecesScreen: React.FC<PuzzlePiecesScreenProps> = ({ onBack, onCompl
     );
   };
 
-  const getQualityColor = (quality: string) => {
-    switch (quality) {
-      case 'Excellent': return '#4CAF50';
-      case 'Good': return '#2196F3';
-      case 'Fair': return '#FF9800';
-      case 'Poor': return '#F44336';
-      default: return '#FFFFFF';
-    }
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getSleepScore = () => {
-    if (sleepRecords.length === 0) return 0;
-    
-    const avgHours = sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length;
-    const qualityScore = sleepRecords.reduce((sum, record) => {
-      switch (record.quality) {
-        case 'Excellent': return sum + 4;
-        case 'Good': return sum + 3;
-        case 'Fair': return sum + 2;
-        case 'Poor': return sum + 1;
-        default: return sum;
-      }
-    }, 0) / sleepRecords.length;
-
-    return Math.round((avgHours / 8) * qualityScore * 25); // Max score 100
+  const renderPuzzlePiece = (piece: PuzzlePiece) => {
+    return (
+      <TouchableOpacity
+        key={piece.id}
+        style={[
+          styles.piece,
+          { backgroundColor: piece.color },
+          selectedPiece?.id === piece.id && styles.pieceSelected,
+          piece.isPlaced && styles.piecePlaced
+        ]}
+        onPress={() => handlePieceSelect(piece)}
+      >
+        <Text style={styles.pieceText}>{piece.number}</Text>
+      </TouchableOpacity>
+    );
   };
 
-  const getSleepAdvice = () => {
-    const avgHours = sleepRecords.length > 0 
-      ? sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length 
-      : 0;
-    
-    if (avgHours < 6) return "Try to get more sleep - aim for 7-9 hours";
-    if (avgHours > 9) return "Consider if you might be oversleeping";
-    if (avgHours >= 7 && avgHours <= 9) return "Great sleep duration! Keep it up";
-    return "Log your sleep to get personalized advice";
+  const renderGridCell = (position: number) => {
+    const piece = grid[position];
+    const isCorrect = piece && piece.currentPosition === piece.correctPosition;
+
+    return (
+      <TouchableOpacity
+        key={position}
+        style={[
+          styles.gridCell,
+          piece && { backgroundColor: piece.color },
+          isCorrect && styles.gridCellCorrect
+        ]}
+        onPress={() => handleGridPress(position)}
+      >
+        {piece && (
+          <Text style={styles.gridCellText}>{piece.number}</Text>
+        )}
+      </TouchableOpacity>
+    );
   };
+
+  if (!gameStarted) {
+    return (
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.container}
+      >
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Puzzle Pieces</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View style={styles.startContainer}>
+          <View style={styles.instructionCard}>
+            <Ionicons name="extension-puzzle" size={48} color="#FF5722" />
+            <Text style={styles.instructionTitle}>Puzzle Pieces Game</Text>
+            <Text style={styles.instructionText}>
+              Arrange the numbered pieces in the correct order. Tap a piece to select it, then tap an empty grid position to place it!
+            </Text>
+            <Text style={styles.difficultyText}>Difficulty: Easy</Text>
+          </View>
+
+          <View style={styles.difficultySelector}>
+            <Text style={styles.difficultyLabel}>Puzzle Size:</Text>
+            <View style={styles.difficultyButtons}>
+              {[3, 4, 5].map((size) => (
+                <TouchableOpacity
+                  key={size}
+                  style={[
+                    styles.difficultyButton,
+                    puzzleSize === size && styles.difficultyButtonSelected
+                  ]}
+                  onPress={() => setPuzzleSize(size)}
+                >
+                  <Text style={[
+                    styles.difficultyButtonText,
+                    puzzleSize === size && styles.difficultyButtonTextSelected
+                  ]}>
+                    {size}x{size}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.startButton} onPress={initializeGame}>
+            <Ionicons name="play" size={32} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Start Game</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -189,89 +282,67 @@ const PuzzlePiecesScreen: React.FC<PuzzlePiecesScreenProps> = ({ onBack, onCompl
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sleep Cycle</Text>
+        <Text style={styles.headerTitle}>Puzzle Pieces</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Sleep Overview</Text>
-          <View style={styles.summaryStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{getSleepScore()}</Text>
-              <Text style={styles.statLabel}>Sleep Score</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>
-                {sleepRecords.length > 0 
-                  ? Math.round(sleepRecords.reduce((sum, record) => sum + record.totalHours, 0) / sleepRecords.length * 10) / 10
-                  : '0'
-                }
-              </Text>
-              <Text style={styles.statLabel}>Avg Hours</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{sleepRecords.length}</Text>
-              <Text style={styles.statLabel}>Records</Text>
-            </View>
+        <View style={styles.gameStats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{formatTime(time)}</Text>
+            <Text style={styles.statLabel}>Time</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{piecesPlaced}</Text>
+            <Text style={styles.statLabel}>Placed</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{score}</Text>
+            <Text style={styles.statLabel}>Score</Text>
           </View>
         </View>
 
-        <View style={styles.adviceCard}>
-          <Ionicons name="bulb" size={24} color="#FFD700" />
-          <Text style={styles.adviceText}>{getSleepAdvice()}</Text>
-        </View>
+        <View style={styles.gameArea}>
+          <Text style={styles.gameTitle}>Arrange the pieces in order:</Text>
+          
+          <View style={styles.puzzleGrid}>
+            {Array.from({ length: puzzleSize * puzzleSize }, (_, index) => 
+              renderGridCell(index)
+            )}
+          </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Log New Sleep</Text>
-            <TouchableOpacity
-              style={styles.logButton}
-              onPress={() => setShowLogSleep(true)}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.logButtonText}>Log Sleep</Text>
-            </TouchableOpacity>
+          <Text style={styles.piecesTitle}>Available Pieces:</Text>
+          <View style={styles.piecesContainer}>
+            {pieces.map(renderPuzzlePiece)}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Sleep Records</Text>
-          {sleepRecords.length === 0 ? (
-            <Text style={styles.noRecordsText}>
-              No sleep records yet. Log your first sleep to get started!
-            </Text>
-          ) : (
-            <View style={styles.recordsList}>
-              {sleepRecords.map((record) => (
-                <View key={record.id} style={styles.recordCard}>
-                  <View style={styles.recordHeader}>
-                    <Text style={styles.recordDate}>{record.date}</Text>
-                    <View style={[styles.qualityBadge, { backgroundColor: getQualityColor(record.quality) }]}>
-                      <Text style={styles.qualityText}>{record.quality}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.recordDetails}>
-                    <View style={styles.timeItem}>
-                      <Ionicons name="moon" size={16} color="#9C27B0" />
-                      <Text style={styles.timeText}>Bed: {record.bedTime}</Text>
-                    </View>
-                    <View style={styles.timeItem}>
-                      <Ionicons name="sunny" size={16} color="#FF9800" />
-                      <Text style={styles.timeText}>Wake: {record.wakeTime}</Text>
-                    </View>
-                    <View style={styles.timeItem}>
-                      <Ionicons name="time" size={16} color="#2196F3" />
-                      <Text style={styles.timeText}>{record.totalHours}h</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
+        <View style={styles.instructionsCard}>
+          <Text style={styles.instructionsTitle}>How to Play:</Text>
+          <Text style={styles.instructionItem}>1. Tap a piece to select it</Text>
+          <Text style={styles.instructionItem}>2. Tap an empty grid position to place it</Text>
+          <Text style={styles.instructionItem}>3. Arrange pieces in numerical order (1, 2, 3...)</Text>
+          <Text style={styles.instructionItem}>4. Complete the puzzle as quickly as possible!</Text>
         </View>
+
+        <TouchableOpacity 
+          style={styles.restartButton} 
+          onPress={() => {
+            Alert.alert(
+              'Restart Game?',
+              'Are you sure you want to restart? Your progress will be lost.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Restart', onPress: initializeGame }
+              ]
+            );
+          }}
+        >
+          <Ionicons name="refresh" size={20} color="#FFFFFF" />
+          <Text style={styles.restartButtonText}>Restart</Text>
+        </TouchableOpacity>
       </ScrollView>
-   </LinearGradient>
+    </LinearGradient>
   );
 };
 
@@ -519,6 +590,3 @@ const styles = StyleSheet.create({
 });
 
 export default PuzzlePiecesScreen;
-
-
-      

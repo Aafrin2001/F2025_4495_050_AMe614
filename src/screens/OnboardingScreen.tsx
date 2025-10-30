@@ -15,11 +15,6 @@ import { OnboardingSlide } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
-
-
-
-
-
 interface OnboardingScreenProps {
   onFinish: () => void;
 }
@@ -248,4 +243,3 @@ const styles = StyleSheet.create({
 });
 
 export default OnboardingScreen;
-

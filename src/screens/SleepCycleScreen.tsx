@@ -61,6 +61,7 @@ const SleepCycleScreen: React.FC<SleepCycleScreenProps> = ({ onBack, onComplete 
       quality: 'Excellent',
     },
   ]);
+
   const [showLogSleep, setShowLogSleep] = useState(false);
   const [newSleep, setNewSleep] = useState({
     bedTime: '',
@@ -85,7 +86,8 @@ const SleepCycleScreen: React.FC<SleepCycleScreenProps> = ({ onBack, onComplete 
     const totalMinutes = wakeMinutes - bedMinutes;
     return Math.round((totalMinutes / 60) * 10) / 10; // Round to 1 decimal place
   };
-const handleLogSleep = () => {
+
+  const handleLogSleep = () => {
     if (!newSleep.bedTime || !newSleep.wakeTime) {
       Alert.alert('Error', 'Please fill in both bed time and wake time');
       return;
@@ -110,7 +112,9 @@ const handleLogSleep = () => {
       quality: newSleep.quality,
       completed: true,
     };
-  const newRecord: SleepRecord = {
+
+    // Add to records
+    const newRecord: SleepRecord = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
       bedTime: newSleep.bedTime,
@@ -138,7 +142,8 @@ const handleLogSleep = () => {
       ]
     );
   };
-    const getQualityColor = (quality: string) => {
+
+  const getQualityColor = (quality: string) => {
     switch (quality) {
       case 'Excellent': return '#4CAF50';
       case 'Good': return '#2196F3';
@@ -175,6 +180,7 @@ const handleLogSleep = () => {
     if (avgHours >= 7 && avgHours <= 9) return "Great sleep duration! Keep it up";
     return "Log your sleep to get personalized advice";
   };
+
   return (
     <LinearGradient
       colors={['#667eea', '#764ba2']}
@@ -268,6 +274,7 @@ const handleLogSleep = () => {
           )}
         </View>
       </ScrollView>
+
       {/* Log Sleep Modal */}
       {showLogSleep && (
         <View style={styles.modalOverlay}>
@@ -284,6 +291,7 @@ const handleLogSleep = () => {
                 placeholderTextColor="rgba(255, 255, 255, 0.7)"
               />
             </View>
+
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Wake Time</Text>
               <TextInput
@@ -294,6 +302,7 @@ const handleLogSleep = () => {
                 placeholderTextColor="rgba(255, 255, 255, 0.7)"
               />
             </View>
+
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Sleep Quality</Text>
               <View style={styles.qualityButtons}>
@@ -339,6 +348,7 @@ const handleLogSleep = () => {
     </LinearGradient>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -580,4 +590,3 @@ const styles = StyleSheet.create({
 });
 
 export default SleepCycleScreen;
-

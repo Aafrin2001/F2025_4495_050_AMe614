@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,166 +7,101 @@ import {
   ScrollView,
   Modal,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { AdminDashboardService, AdminDashboardStats, HealthTrend, MedicationAlert, EmergencyAlert, DailyActivity, InactivityAlert } from '../lib/adminDashboardService';
 
 interface AdminDashboardScreenProps {
   onBack: () => void;
 }
 
-interface DailyActivity {
-  id: string;
-  date: string;
-  walkingMinutes: number;
-  stretchingCompleted: boolean;
-  breathingSessions: number;
-  sleepHours: number;
-  brainGamesPlayed: number;
-  medicationsTaken: number;
-  totalMedications: number;
-  healthReadings: number;
-}
-
-interface HealthTrend {
-  date: string;
-  bloodPressure: string;
-  heartRate: number;
-  weight: number;
-  mood: 'Excellent' | 'Good' | 'Fair' | 'Poor';
-}
-
-interface MedicationAlert {
-  id: string;
-  medicationName: string;
-  currentStock: number;
-  daysRemaining: number;
-  isLow: boolean;
-  isCritical: boolean;
-  lastRefill: string;
-}
-
-interface EmergencyAlert {
-  id: string;
-  type: 'Health' | 'Medication' | 'Activity' | 'Safety';
-  message: string;
-  timestamp: string;
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  isResolved: boolean;
-}
+const { width } = Dimensions.get('window');
 
 const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('7d');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Data states
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [healthTrends, setHealthTrends] = useState<HealthTrend[]>([]);
+  const [medicationAlerts, setMedicationAlerts] = useState<MedicationAlert[]>([]);
+  const [emergencyAlerts, setEmergencyAlerts] = useState<EmergencyAlert[]>([]);
+  const [dailyActivities, setDailyActivities] = useState<DailyActivity[]>([]);
+  const [inactivityAlerts, setInactivityAlerts] = useState<InactivityAlert[]>([]);
+  
+  // Modal states
   const [showHealthTrends, setShowHealthTrends] = useState(false);
   const [showMedicationAlerts, setShowMedicationAlerts] = useState(false);
   const [showEmergencyAlerts, setShowEmergencyAlerts] = useState(false);
+  const [showInactivityAlerts, setShowInactivityAlerts] = useState(false);
+  
+  // Auto-refresh timer
+  const refreshTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Mock data - in a real app, this would come from an API
-  const dailyActivities: DailyActivity[] = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      walkingMinutes: 25,
-      stretchingCompleted: true,
-      breathingSessions: 2,
-      sleepHours: 7.5,
-      brainGamesPlayed: 3,
-      medicationsTaken: 3,
-      totalMedications: 3,
-      healthReadings: 2,
-    },
-    {
-      id: '2',
-      date: '2024-01-14',
-      walkingMinutes: 15,
-      stretchingCompleted: false,
-      breathingSessions: 1,
-      sleepHours: 6.8,
-      brainGamesPlayed: 2,
-      medicationsTaken: 2,
-      totalMedications: 3,
-      healthReadings: 1,
-    },
-    {
-      id: '3',
-      date: '2024-01-13',
-      walkingMinutes: 30,
-      stretchingCompleted: true,
-      breathingSessions: 3,
-      sleepHours: 8.2,
-      brainGamesPlayed: 4,
-      medicationsTaken: 3,
-      totalMedications: 3,
-      healthReadings: 3,
-    },
-  ];
+  useEffect(() => {
+    loadAllData();
+    
+    // Set up auto-refresh every 5 minutes
+    refreshTimer.current = setInterval(() => {
+      loadAllData(true);
+    }, 5 * 60 * 1000);
 
-  const healthTrends: HealthTrend[] = [
-    { date: '2024-01-15', bloodPressure: '120/80', heartRate: 72, weight: 165, mood: 'Good' },
-    { date: '2024-01-14', bloodPressure: '125/82', heartRate: 75, weight: 166, mood: 'Fair' },
-    { date: '2024-01-13', bloodPressure: '118/78', heartRate: 70, weight: 165, mood: 'Excellent' },
-    { date: '2024-01-12', bloodPressure: '130/85', heartRate: 78, weight: 167, mood: 'Fair' },
-    { date: '2024-01-11', bloodPressure: '122/79', heartRate: 73, weight: 166, mood: 'Good' },
-  ];
+    return () => {
+      if (refreshTimer.current) {
+        clearInterval(refreshTimer.current);
+      }
+    };
+  }, [selectedTimeframe]);
 
-  const medicationAlerts: MedicationAlert[] = [
-    {
-      id: '1',
-      medicationName: 'Lisinopril',
-      currentStock: 5,
-      daysRemaining: 3,
-      isLow: true,
-      isCritical: false,
-      lastRefill: '2024-01-10',
-    },
-    {
-      id: '2',
-      medicationName: 'Metformin',
-      currentStock: 2,
-      daysRemaining: 1,
-      isLow: true,
-      isCritical: true,
-      lastRefill: '2024-01-08',
-    },
-    {
-      id: '3',
-      medicationName: 'Albuterol',
-      currentStock: 15,
-      daysRemaining: 10,
-      isLow: false,
-      isCritical: false,
-      lastRefill: '2024-01-12',
-    },
-  ];
+  const loadAllData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-  const emergencyAlerts: EmergencyAlert[] = [
-    {
-      id: '1',
-      type: 'Medication',
-      message: 'Metformin running critically low - only 1 day remaining',
-      timestamp: '2024-01-15 14:30',
-      severity: 'Critical',
-      isResolved: false,
-    },
-    {
-      id: '2',
-      type: 'Health',
-      message: 'Blood pressure reading above normal range',
-      timestamp: '2024-01-14 09:15',
-      severity: 'Medium',
-      isResolved: true,
-    },
-    {
-      id: '3',
-      type: 'Activity',
-      message: 'No physical activity recorded for 2 days',
-      timestamp: '2024-01-13 18:00',
-      severity: 'Low',
-      isResolved: true,
-    },
-  ];
+    try {
+      const [
+        statsResult,
+        healthTrendsResult,
+        medicationAlertsResult,
+        emergencyAlertsResult,
+        dailyActivitiesResult,
+        inactivityAlertsResult,
+      ] = await Promise.all([
+        AdminDashboardService.getDashboardStats(selectedTimeframe),
+        AdminDashboardService.getHealthTrends(selectedTimeframe),
+        AdminDashboardService.getMedicationAlerts(),
+        AdminDashboardService.getEmergencyAlerts(),
+        AdminDashboardService.getDailyActivities(selectedTimeframe),
+        AdminDashboardService.getInactivityAlerts(),
+      ]);
+
+      if (statsResult.success) setStats(statsResult.data || null);
+      if (healthTrendsResult.success) setHealthTrends(healthTrendsResult.data || []);
+      if (medicationAlertsResult.success) setMedicationAlerts(medicationAlertsResult.data || []);
+      if (emergencyAlertsResult.success) setEmergencyAlerts(emergencyAlertsResult.data || []);
+      if (dailyActivitiesResult.success) setDailyActivities(dailyActivitiesResult.data || []);
+      if (inactivityAlertsResult.success) setInactivityAlerts(inactivityAlertsResult.data || []);
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadAllData(true);
+  };
 
   const getTimeframeLabel = (timeframe: string) => {
     switch (timeframe) {
@@ -187,32 +122,160 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
     }
   };
 
-  const getMoodColor = (mood: string) => {
-    switch (mood) {
-      case 'Excellent': return '#4CAF50';
-      case 'Good': return '#8BC34A';
-      case 'Fair': return '#FF9800';
-      case 'Poor': return '#F44336';
+  const getAlertLevelColor = (level: string) => {
+    switch (level) {
+      case 'Low': return '#4CAF50';
+      case 'Medium': return '#FF9800';
+      case 'High': return '#F44336';
+      case 'Critical': return '#D32F2F';
       default: return '#FFFFFF';
     }
   };
 
-  const calculateAverage = (data: number[]) => {
-    return data.length > 0 ? (data.reduce((sum, val) => sum + val, 0) / data.length).toFixed(1) : '0';
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
-  const renderActivityCard = (activity: DailyActivity) => (
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const renderStatsCard = (icon: string, value: string | number, label: string, color: string) => (
+    <View style={styles.summaryCard}>
+      <Ionicons name={icon as any} size={24} color={color} />
+      <Text style={styles.summaryNumber}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+
+  const renderHealthTrendCard = (trend: HealthTrend) => (
+    <View key={trend.date} style={styles.trendCard}>
+      <Text style={styles.trendDate}>{formatDate(trend.date)}</Text>
+      <View style={styles.trendMetrics}>
+        {trend.bloodPressure !== '0/0' && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>BP</Text>
+            <Text style={styles.trendValue}>{trend.bloodPressure}</Text>
+          </View>
+        )}
+        {trend.heartRate > 0 && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>HR</Text>
+            <Text style={styles.trendValue}>{trend.heartRate} bpm</Text>
+          </View>
+        )}
+        {trend.weight > 0 && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>Weight</Text>
+            <Text style={styles.trendValue}>{trend.weight} lbs</Text>
+          </View>
+        )}
+        {trend.temperature > 0 && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>Temp</Text>
+            <Text style={styles.trendValue}>{trend.temperature}°F</Text>
+          </View>
+        )}
+        {trend.oxygenLevel > 0 && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>O2</Text>
+            <Text style={styles.trendValue}>{trend.oxygenLevel}%</Text>
+          </View>
+        )}
+        {trend.bloodSugar > 0 && (
+          <View style={styles.trendItem}>
+            <Text style={styles.trendLabel}>Glucose</Text>
+            <Text style={styles.trendValue}>{trend.bloodSugar} mg/dL</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderMedicationAlertCard = (alert: MedicationAlert) => (
+    <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.isCritical ? '#F44336' : '#FF9800' }]}>
+      <View style={styles.alertHeader}>
+        <Ionicons 
+          name={alert.isCritical ? "warning" : "alert-circle"} 
+          size={20} 
+          color={alert.isCritical ? '#F44336' : '#FF9800'} 
+        />
+        <Text style={styles.alertTitle}>{alert.medicationName}</Text>
+        <Text style={[styles.alertSeverity, { color: alert.isCritical ? '#F44336' : '#FF9800' }]}>
+          {alert.isCritical ? 'CRITICAL' : 'UPCOMING'}
+        </Text>
+      </View>
+      <Text style={styles.alertMessage}>
+        {alert.userName} - {alert.daysUntilRefill} day{alert.daysUntilRefill !== 1 ? 's' : ''} until refill
+      </Text>
+      <Text style={styles.alertTimestamp}>Refill due: {formatDate(alert.refillDate)}</Text>
+    </View>
+  );
+
+  const renderEmergencyAlertCard = (alert: EmergencyAlert) => (
+    <View key={alert.id} style={[styles.emergencyCard, { borderLeftColor: getSeverityColor(alert.severity) }]}>
+      <View style={styles.alertHeader}>
+        <Ionicons 
+          name={alert.type === 'Health' ? 'heart' : alert.type === 'Medication' ? 'medical' : 'warning'} 
+          size={20} 
+          color={getSeverityColor(alert.severity)} 
+        />
+        <Text style={styles.alertTitle}>{alert.userName}</Text>
+        <Text style={[styles.alertSeverity, { color: getSeverityColor(alert.severity) }]}>
+          {alert.severity.toUpperCase()}
+        </Text>
+      </View>
+      <Text style={styles.alertMessage}>{alert.message}</Text>
+      <Text style={styles.alertTimestamp}>{formatDate(alert.timestamp)} at {formatTime(alert.timestamp)}</Text>
+      {alert.isResolved && (
+        <View style={styles.resolvedBadge}>
+          <Text style={styles.resolvedText}>RESOLVED</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderInactivityAlertCard = (alert: InactivityAlert) => (
+    <View key={alert.id} style={[styles.inactivityCard, { borderLeftColor: getAlertLevelColor(alert.alertLevel) }]}>
+      <View style={styles.alertHeader}>
+        <Ionicons 
+          name="time-outline" 
+          size={20} 
+          color={getAlertLevelColor(alert.alertLevel)} 
+        />
+        <Text style={styles.alertTitle}>{alert.userName}</Text>
+        <Text style={[styles.alertSeverity, { color: getAlertLevelColor(alert.alertLevel) }]}>
+          {alert.alertLevel.toUpperCase()}
+        </Text>
+      </View>
+      <Text style={styles.alertMessage}>
+        {alert.daysInactive === 999 ? 'No activity ever recorded' : `${alert.daysInactive} days inactive`}
+      </Text>
+      <Text style={styles.alertTimestamp}>
+        Last activity: {formatDate(alert.lastActivityDate)}
+      </Text>
+      {alert.isResolved && (
+        <View style={styles.resolvedBadge}>
+          <Text style={styles.resolvedText}>RESOLVED</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderDailyActivityCard = (activity: DailyActivity) => (
     <View key={activity.id} style={styles.activityCard}>
       <View style={styles.activityHeader}>
-        <Text style={styles.activityDate}>{activity.date}</Text>
+        <Text style={styles.activityDate}>{formatDate(activity.date)}</Text>
+        <Text style={styles.activityUser}>{activity.userName}</Text>
         <View style={styles.activityScore}>
-          <Text style={styles.scoreText}>
-            {Math.round(((activity.walkingMinutes > 0 ? 1 : 0) + 
-                         (activity.stretchingCompleted ? 1 : 0) + 
-                         (activity.breathingSessions > 0 ? 1 : 0) + 
-                         (activity.brainGamesPlayed > 0 ? 1 : 0) + 
-                         (activity.medicationsTaken / activity.totalMedications)) * 20)}%
-          </Text>
+          <Text style={styles.scoreText}>{activity.activityScore}%</Text>
         </View>
       </View>
       
@@ -241,94 +304,47 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           <Ionicons name="medical" size={16} color="#F44336" />
           <Text style={styles.metricText}>{activity.medicationsTaken}/{activity.totalMedications}</Text>
         </View>
-      </View>
-    </View>
-  );
-
-  const renderHealthTrend = (trend: HealthTrend) => (
-    <View key={trend.date} style={styles.trendCard}>
-      <Text style={styles.trendDate}>{trend.date}</Text>
-      <View style={styles.trendMetrics}>
-        <View style={styles.trendItem}>
-          <Text style={styles.trendLabel}>BP</Text>
-          <Text style={styles.trendValue}>{trend.bloodPressure}</Text>
-        </View>
-        <View style={styles.trendItem}>
-          <Text style={styles.trendLabel}>HR</Text>
-          <Text style={styles.trendValue}>{trend.heartRate} bpm</Text>
-        </View>
-        <View style={styles.trendItem}>
-          <Text style={styles.trendLabel}>Weight</Text>
-          <Text style={styles.trendValue}>{trend.weight} lbs</Text>
-        </View>
-        <View style={styles.trendItem}>
-          <Text style={[styles.trendValue, { color: getMoodColor(trend.mood) }]}>
-            {trend.mood}
-          </Text>
+        <View style={styles.metricItem}>
+          <Ionicons name="heart" size={16} color="#FF5722" />
+          <Text style={styles.metricText}>{activity.healthReadings}</Text>
         </View>
       </View>
     </View>
   );
 
-  const renderMedicationAlert = (alert: MedicationAlert) => (
-    <View key={alert.id} style={[styles.alertCard, { borderLeftColor: alert.isCritical ? '#F44336' : '#FF9800' }]}>
-      <View style={styles.alertHeader}>
-        <Ionicons 
-          name={alert.isCritical ? "warning" : "alert-circle"} 
-          size={20} 
-          color={alert.isCritical ? '#F44336' : '#FF9800'} 
-        />
-        <Text style={styles.alertTitle}>{alert.medicationName}</Text>
-        <Text style={[styles.alertSeverity, { color: alert.isCritical ? '#F44336' : '#FF9800' }]}>
-          {alert.isCritical ? 'CRITICAL' : 'LOW STOCK'}
-        </Text>
-      </View>
-      <Text style={styles.alertMessage}>
-        Only {alert.daysRemaining} day{alert.daysRemaining !== 1 ? 's' : ''} remaining ({alert.currentStock} pills left)
-      </Text>
-      <Text style={styles.alertTimestamp}>Last refill: {alert.lastRefill}</Text>
-    </View>
-  );
-
-  const renderEmergencyAlert = (alert: EmergencyAlert) => (
-    <View key={alert.id} style={[styles.emergencyCard, { borderLeftColor: getSeverityColor(alert.severity) }]}>
-      <View style={styles.alertHeader}>
-        <Ionicons 
-          name={alert.type === 'Health' ? 'heart' : alert.type === 'Medication' ? 'medical' : 'warning'} 
-          size={20} 
-          color={getSeverityColor(alert.severity)} 
-        />
-        <Text style={styles.alertTitle}>{alert.type} Alert</Text>
-        <Text style={[styles.alertSeverity, { color: getSeverityColor(alert.severity) }]}>
-          {alert.severity.toUpperCase()}
-        </Text>
-      </View>
-      <Text style={styles.alertMessage}>{alert.message}</Text>
-      <Text style={styles.alertTimestamp}>{alert.timestamp}</Text>
-      {alert.isResolved && (
-        <View style={styles.resolvedBadge}>
-          <Text style={styles.resolvedText}>RESOLVED</Text>
+  if (loading) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
-      )}
-    </View>
-  );
+      </LinearGradient>
+    );
+  }
 
   return (
-    <LinearGradient
-      colors={['#667eea', '#764ba2']}
-      style={styles.container}
-    >
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       <StatusBar style="light" />
       
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>Personal Dashboard</Text>
+        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FFFFFF" />
+        }
+      >
         {/* Timeframe Selector */}
         <View style={styles.timeframeSelector}>
           {(['7d', '30d', '90d'] as const).map((timeframe) => (
@@ -351,39 +367,26 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
         </View>
 
         {/* Summary Cards */}
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Ionicons name="trending-up" size={24} color="#4CAF50" />
-            <Text style={styles.summaryNumber}>
-              {calculateAverage(dailyActivities.map(a => a.walkingMinutes))}
-            </Text>
-            <Text style={styles.summaryLabel}>Avg Walk (min)</Text>
+        {stats && (
+          <View style={styles.summaryGrid}>
+            {renderStatsCard('trending-up', stats.walkDistance.toFixed(1), 'Walk Distance (km)', '#4CAF50')}
+            {renderStatsCard('moon', stats.sleepDuration.toFixed(1), 'Sleep Duration (hrs)', '#9C27B0')}
+            {renderStatsCard('medical', `${stats.medicationAdherence.toFixed(0)}%`, 'Med Adherence', '#F44336')}
+            {renderStatsCard('bulb', stats.gamesPlayed.toFixed(1), 'Games Played', '#E91E63')}
+            {renderStatsCard('checkmark-circle', stats.activeUsers > 0 ? 'Active' : 'Inactive', 'Status', stats.activeUsers > 0 ? '#4CAF50' : '#FF9800')}
+            {renderStatsCard('warning', stats.criticalAlerts, 'Critical Alerts', stats.criticalAlerts > 0 ? '#F44336' : '#4CAF50')}
           </View>
-          
-          <View style={styles.summaryCard}>
-            <Ionicons name="moon" size={24} color="#9C27B0" />
-            <Text style={styles.summaryNumber}>
-              {calculateAverage(dailyActivities.map(a => a.sleepHours))}
+        )}
+
+        {/* Critical Alerts Summary */}
+        {(stats?.criticalAlerts || 0) > 0 && (
+          <View style={styles.criticalAlertsBanner}>
+            <Ionicons name="warning" size={24} color="#FFFFFF" />
+            <Text style={styles.criticalAlertsText}>
+              {stats?.criticalAlerts} Critical Alert{(stats?.criticalAlerts || 0) !== 1 ? 's' : ''} Require Your Attention
             </Text>
-            <Text style={styles.summaryLabel}>Avg Sleep (hrs)</Text>
           </View>
-          
-          <View style={styles.summaryCard}>
-            <Ionicons name="medical" size={24} color="#F44336" />
-            <Text style={styles.summaryNumber}>
-              {Math.round(dailyActivities.reduce((sum, a) => sum + (a.medicationsTaken / a.totalMedications), 0) / dailyActivities.length * 100)}%
-            </Text>
-            <Text style={styles.summaryLabel}>Med Adherence</Text>
-          </View>
-          
-          <View style={styles.summaryCard}>
-            <Ionicons name="bulb" size={24} color="#E91E63" />
-            <Text style={styles.summaryNumber}>
-              {calculateAverage(dailyActivities.map(a => a.brainGamesPlayed))}
-            </Text>
-            <Text style={styles.summaryLabel}>Avg Games</Text>
-          </View>
-        </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -393,6 +396,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           >
             <Ionicons name="pulse" size={24} color="#FFFFFF" />
             <Text style={styles.actionText}>Health Trends</Text>
+            <Text style={styles.actionSubtext}>{healthTrends.length} readings</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -401,6 +405,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           >
             <Ionicons name="medical" size={24} color="#FFFFFF" />
             <Text style={styles.actionText}>Med Alerts</Text>
+            <Text style={styles.actionSubtext}>{medicationAlerts.length} alerts</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -409,23 +414,40 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           >
             <Ionicons name="warning" size={24} color="#FFFFFF" />
             <Text style={styles.actionText}>Emergencies</Text>
+            <Text style={styles.actionSubtext}>{emergencyAlerts.length} alerts</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => setShowInactivityAlerts(true)}
+          >
+            <Ionicons name="time-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.actionText}>Inactivity</Text>
+            <Text style={styles.actionSubtext}>{inactivityAlerts.length} alerts</Text>
           </TouchableOpacity>
         </View>
 
         {/* Daily Activities */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Activities</Text>
-          <View style={styles.activitiesList}>
-            {dailyActivities.map(renderActivityCard)}
-          </View>
+          <Text style={styles.sectionTitle}>Daily Activities ({dailyActivities.length})</Text>
+          {dailyActivities.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+              <Text style={styles.emptyStateText}>No activities recorded</Text>
+            </View>
+          ) : (
+            <View style={styles.activitiesList}>
+              {dailyActivities.slice(0, 10).map(renderDailyActivityCard)}
+            </View>
+          )}
         </View>
 
-        {/* Critical Alerts */}
-        {medicationAlerts.filter(a => a.isCritical).length > 0 && (
+        {/* Critical Alerts Preview */}
+        {emergencyAlerts.filter(a => a.severity === 'Critical').length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Critical Alerts</Text>
             <View style={styles.alertsList}>
-              {medicationAlerts.filter(a => a.isCritical).map(renderMedicationAlert)}
+              {emergencyAlerts.filter(a => a.severity === 'Critical').slice(0, 3).map(renderEmergencyAlertCard)}
             </View>
           </View>
         )}
@@ -441,13 +463,20 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Health Trends</Text>
+              <Text style={styles.modalTitle}>Health Trends ({healthTrends.length})</Text>
               <TouchableOpacity onPress={() => setShowHealthTrends(false)}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.trendsList}>
-              {healthTrends.map(renderHealthTrend)}
+              {healthTrends.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="heart-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+                  <Text style={styles.emptyStateText}>No health data available</Text>
+                </View>
+              ) : (
+                healthTrends.map(renderHealthTrendCard)
+              )}
             </ScrollView>
           </View>
         </View>
@@ -463,13 +492,20 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Medication Alerts</Text>
+              <Text style={styles.modalTitle}>Medication Alerts ({medicationAlerts.length})</Text>
               <TouchableOpacity onPress={() => setShowMedicationAlerts(false)}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.alertsList}>
-              {medicationAlerts.map(renderMedicationAlert)}
+              {medicationAlerts.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="medical-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+                  <Text style={styles.emptyStateText}>No medication alerts</Text>
+                </View>
+              ) : (
+                medicationAlerts.map(renderMedicationAlertCard)
+              )}
             </ScrollView>
           </View>
         </View>
@@ -485,13 +521,49 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Emergency Alerts</Text>
+              <Text style={styles.modalTitle}>Emergency Alerts ({emergencyAlerts.length})</Text>
               <TouchableOpacity onPress={() => setShowEmergencyAlerts(false)}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.alertsList}>
-              {emergencyAlerts.map(renderEmergencyAlert)}
+              {emergencyAlerts.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="warning-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+                  <Text style={styles.emptyStateText}>No emergency alerts</Text>
+                </View>
+              ) : (
+                emergencyAlerts.map(renderEmergencyAlertCard)
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Inactivity Alerts Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showInactivityAlerts}
+        onRequestClose={() => setShowInactivityAlerts(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Inactivity Alerts ({inactivityAlerts.length})</Text>
+              <TouchableOpacity onPress={() => setShowInactivityAlerts(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.alertsList}>
+              {inactivityAlerts.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="time-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+                  <Text style={styles.emptyStateText}>No inactivity alerts</Text>
+                </View>
+              ) : (
+                inactivityAlerts.map(renderInactivityAlertCard)
+              )}
             </ScrollView>
           </View>
         </View>
@@ -522,12 +594,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginRight: 40,
   },
-  headerSpacer: {
-    width: 40,
+  refreshButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginTop: 10,
   },
   timeframeSelector: {
     flexDirection: 'row',
@@ -580,24 +662,49 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
   },
+  criticalAlertsBanner: {
+    backgroundColor: 'rgba(244, 67, 54, 0.3)',
+    borderRadius: 15,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 67, 54, 0.5)',
+  },
+  criticalAlertsText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
+    flex: 1,
+  },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 30,
   },
   actionButton: {
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 15,
-    padding: 20,
+    padding: 15,
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
+    marginBottom: 10,
   },
   actionText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  actionSubtext: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 30,
@@ -607,6 +714,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 15,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 15,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 10,
   },
   activitiesList: {
     gap: 15,
@@ -626,6 +744,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  activityUser: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    flex: 1,
+    textAlign: 'center',
   },
   activityScore: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -662,6 +786,18 @@ const styles = StyleSheet.create({
     padding: 20,
     borderLeftWidth: 4,
   },
+  emergencyCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+  },
+  inactivityCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+  },
   alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -686,12 +822,6 @@ const styles = StyleSheet.create({
   alertTimestamp: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.6)',
-  },
-  emergencyCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 15,
-    padding: 20,
-    borderLeftWidth: 4,
   },
   resolvedBadge: {
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -722,10 +852,13 @@ const styles = StyleSheet.create({
   },
   trendMetrics: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   trendItem: {
     alignItems: 'center',
+    width: '30%',
+    marginBottom: 10,
   },
   trendLabel: {
     fontSize: 12,

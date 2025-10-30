@@ -15,9 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 interface VoiceChatScreenProps {
   onBack: () => void;
 }
-interface VoiceChatScreenProps {
-  onBack: () => void;
-}
 
 interface VoiceMessage {
   id: string;
@@ -77,7 +74,7 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
       pulseAnim.setValue(1);
     }
   }, [isListening]);
-  
+
   const handleStartListening = () => {
     setIsListening(true);
     // Simulate listening for 3 seconds
@@ -146,7 +143,8 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
       setIsSpeaking(false);
     }, 1500);
   };
-    const renderMessage = (message: VoiceMessage) => (
+
+  const renderMessage = (message: VoiceMessage) => (
     <View
       key={message.id}
       style={[
@@ -287,8 +285,7 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
             onPress={isListening ? handleStopListening : handleStartListening}
             disabled={isProcessing || isSpeaking}
           >
-           };
-           <Ionicons
+            <Ionicons
               name={isListening ? "stop" : "mic"}
               size={32}
               color={isListening ? "#FFFFFF" : "#667eea"}
@@ -302,7 +299,6 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
     </LinearGradient>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {

@@ -15,10 +15,6 @@ interface WordSearchScreenProps {
   onBack: () => void;
   onComplete: (data: GameData) => void;
 }
-interface WordSearchScreenProps {
-  onBack: () => void;
-  onComplete: (data: GameData) => void;
-}
 
 interface GameData {
   score: number;
@@ -40,6 +36,7 @@ interface Cell {
   row: number;
   col: number;
 }
+
 const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete }) => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
@@ -87,7 +84,9 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
         };
       }
     }
-     const wordsToPlace = [...gameWords];
+
+    // Place words in grid
+    const wordsToPlace = [...gameWords];
     const placedWords: string[] = [];
 
     wordsToPlace.forEach(wordObj => {
@@ -128,7 +127,8 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
     setTime(0);
     setScore(0);
   };
-    const canPlaceWord = (grid: Cell[][], word: string, row: number, col: number, direction: string): boolean => {
+
+  const canPlaceWord = (grid: Cell[][], word: string, row: number, col: number, direction: string): boolean => {
     if (direction === 'horizontal') {
       if (col + word.length > gridSize) return false;
       for (let i = 0; i < word.length; i++) {
@@ -171,7 +171,8 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
           : c
       )
     ));
-        if (newSelectedCells.length >= 3) {
+
+    if (newSelectedCells.length >= 3) {
       checkForWord(newSelectedCells);
     }
   };
@@ -214,7 +215,8 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
       }, 1000);
     }
   };
-    const completeGame = () => {
+
+  const completeGame = () => {
     setGameCompleted(true);
     const finalScore = score + Math.max(0, 500 - (time * 2));
     setScore(finalScore);
@@ -249,7 +251,8 @@ const WordSearchScreen: React.FC<WordSearchScreenProps> = ({ onBack, onComplete 
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-const renderCell = (cell: Cell) => {
+
+  const renderCell = (cell: Cell) => {
     return (
       <TouchableOpacity
         key={`${cell.row}-${cell.col}`}

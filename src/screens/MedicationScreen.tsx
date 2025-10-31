@@ -37,7 +37,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     dosage: '',
     type: 'pill',
     frequency: '',
-    time: ['09:00'], // Better default time
+    time: [], // No default time - user must add times
     instruction: '',
     doctor: '',
     pharmacy: '',
@@ -127,7 +127,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
       dosage: '',
       type: 'pill',
       frequency: '',
-      time: ['09:00'], // Better default time
+      time: [], // No default time - user must add times
       instruction: '',
       doctor: '',
       pharmacy: '',
@@ -254,21 +254,16 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   };
 
   const addTimeSlot = () => {
-    setFormData({
-      ...formData,
-      time: [...formData.time, '12:00'], // Better default time
-    });
+    // Open time picker to add a new time
+    setEditingTimeIndex(null); // null means adding new time
+    setShowTimePicker(true);
   };
 
   const removeTimeSlot = (index: number) => {
-    if (formData.time.length > 1) {
-      setFormData({
-        ...formData,
-        time: formData.time.filter((_, i) => i !== index),
-      });
-    } else {
-      Alert.alert('Cannot Remove', 'At least one time is required for daily medications.');
-    }
+    setFormData({
+      ...formData,
+      time: formData.time.filter((_, i) => i !== index),
+    });
   };
 
   const updateTimeSlot = (index: number, time: string) => {
@@ -280,13 +275,18 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     });
   };
 
-  const renderTimePicker = () => (
-    <Modal
-      visible={showTimePicker}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowTimePicker(false)}
-    >
+  const renderTimePicker = () => {
+    return (
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        onRequestClose={() => {
+          setShowTimePicker(false);
+          setEditingTimeIndex(null);
+        }}
+      >
       <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
         <View style={styles.pickerOverlay}>
           <TouchableWithoutFeedback onPress={() => {}}>
@@ -294,7 +294,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
               <View style={styles.pickerHeader}>
                 <Text style={styles.pickerTitle}>Select Time</Text>
                 <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                  <Ionicons name="close" size={24} color="#666666" />
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
               
@@ -314,7 +314,14 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                         ]}
                         onPress={() => {
                           if (editingTimeIndex !== null) {
+                            // Editing existing time
                             updateTimeSlot(editingTimeIndex, timeString);
+                          } else {
+                            // Adding new time
+                            setFormData({
+                              ...formData,
+                              time: [...formData.time, timeString],
+                            });
                           }
                           setShowTimePicker(false);
                           setEditingTimeIndex(null);
@@ -336,13 +343,15 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
         </View>
       </TouchableWithoutFeedback>
     </Modal>
-  );
+    );
+  };
 
   const renderDatePicker = () => (
     <Modal
       visible={showDatePicker}
       transparent={true}
       animationType="slide"
+      presentationStyle="overFullScreen"
       onRequestClose={() => setShowDatePicker(false)}
     >
       <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
@@ -352,7 +361,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
               <View style={styles.pickerHeader}>
                 <Text style={styles.pickerTitle}>Select Refill Date</Text>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Ionicons name="close" size={24} color="#666666" />
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
               
@@ -512,21 +521,21 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
-        <StatusBar style="light" />
-        
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Medications</Text>
-        </View>
+    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+      <StatusBar style="light" />
+      
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Medications</Text>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
           {/* Statistics Overview */}
           <View style={styles.statsContainer}>
             <Text style={styles.sectionTitle}>Overview</Text>
@@ -625,11 +634,14 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                         {editingMedication ? 'Edit Medication' : 'Add New Medication'}
                       </Text>
                       <TouchableOpacity onPress={() => setShowAddEditModal(false)}>
-                        <Ionicons name="close" size={24} color="#666666" />
+                        <Ionicons name="close" size={24} color="#FFFFFF" />
                       </TouchableOpacity>
                     </View>
 
-                    <ScrollView contentContainerStyle={styles.modalFormContent}>
+                    <ScrollView 
+                      contentContainerStyle={styles.modalFormContent}
+                      showsVerticalScrollIndicator={false}
+                    >
                       {/* Form Errors */}
                       {formErrors.length > 0 && (
                         <View style={styles.errorContainer}>
@@ -639,26 +651,31 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                         </View>
                       )}
 
-                      <Text style={styles.inputLabel}>Medication Name *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.name}
-                        onChangeText={(text) => setFormData({ ...formData, name: text })}
-                        placeholder="e.g., Metformin"
-                        placeholderTextColor="#999999"
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Medication Name *</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={formData.name}
+                          onChangeText={(text) => setFormData({ ...formData, name: text })}
+                          placeholder="e.g., Metformin"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
-                      <Text style={styles.inputLabel}>Dosage *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.dosage}
-                        onChangeText={(text) => setFormData({ ...formData, dosage: text })}
-                        placeholder="e.g., 500mg"
-                        placeholderTextColor="#999999"
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Dosage *</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={formData.dosage}
+                          onChangeText={(text) => setFormData({ ...formData, dosage: text })}
+                          placeholder="e.g., 500mg"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
-                      <Text style={styles.inputLabel}>Type *</Text>
-                      <View style={styles.typeSelector}>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Type *</Text>
+                        <View style={styles.typeSelector}>
                         {['pill', 'liquid', 'injection', 'cream', 'inhaler'].map((type) => (
                           <TouchableOpacity
                             key={type}
@@ -681,20 +698,24 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                             </Text>
                           </TouchableOpacity>
                         ))}
+                        </View>
                       </View>
 
-                      <Text style={styles.inputLabel}>Frequency *</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.frequency}
-                        onChangeText={(text) => setFormData({ ...formData, frequency: text })}
-                        placeholder="e.g., Twice daily, Every 8 hours"
-                        placeholderTextColor="#999999"
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Frequency *</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={formData.frequency}
+                          onChangeText={(text) => setFormData({ ...formData, frequency: text })}
+                          placeholder="e.g., Twice daily, Every 8 hours"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
                       {/* Daily/PRN Toggle */}
-                      <Text style={styles.inputLabel}>Medication Type *</Text>
-                      <View style={styles.dailyPrnSelector}>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Medication Type *</Text>
+                        <View style={styles.dailyPrnSelector}>
                         <TouchableOpacity
                           style={[
                             styles.dailyPrnOption,
@@ -734,12 +755,13 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                             As Needed (PRN)
                           </Text>
                         </TouchableOpacity>
+                        </View>
                       </View>
 
                       {/* Time Selection for Daily Medications */}
                       {formData.is_daily && (
-                        <>
-                          <Text style={styles.inputLabel}>Times *</Text>
+                        <View style={styles.formGroup}>
+                          <Text style={styles.formLabel}>Times *</Text>
                           <View style={styles.timesInputContainer}>
                             {formData.time.map((time, index) => (
                               <View key={index} style={styles.timeInputRow}>
@@ -756,58 +778,67 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                                   <Ionicons name="time-outline" size={16} color="#FFFFFF" />
                                 </TouchableOpacity>
                                 
-                                {formData.time.length > 1 && (
-                                  <TouchableOpacity
-                                    style={styles.removeTimeButton}
-                                    onPress={() => removeTimeSlot(index)}
-                                  >
-                                    <Ionicons name="close" size={16} color="#FF6B6B" />
-                                  </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                  style={styles.removeTimeButton}
+                                  onPress={() => removeTimeSlot(index)}
+                                >
+                                  <Ionicons name="close" size={16} color="#FF6B6B" />
+                                </TouchableOpacity>
                               </View>
                             ))}
                             
                             <TouchableOpacity
                               style={styles.addTimeButton}
-                              onPress={addTimeSlot}
+                              onPress={() => {
+                                setEditingTimeIndex(null);
+                                setShowTimePicker(true);
+                              }}
+                              activeOpacity={0.7}
                             >
                               <Ionicons name="add" size={16} color="#4CAF50" />
                               <Text style={styles.addTimeText}>Add Time</Text>
                             </TouchableOpacity>
                           </View>
-                        </>
+                        </View>
                       )}
 
-                      <Text style={styles.inputLabel}>Instructions</Text>
-                      <TextInput
-                        style={[styles.textInput, styles.multilineInput]}
-                        value={formData.instruction}
-                        onChangeText={(text) => setFormData({ ...formData, instruction: text })}
-                        placeholder="Special instructions for taking this medication"
-                        placeholderTextColor="#999999"
-                        multiline
-                        numberOfLines={3}
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Instructions</Text>
+                        <TextInput
+                          style={[styles.modalInput, styles.notesInput]}
+                          value={formData.instruction}
+                          onChangeText={(text) => setFormData({ ...formData, instruction: text })}
+                          placeholder="Special instructions for taking this medication"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                          multiline
+                          numberOfLines={3}
+                        />
+                      </View>
 
-                      <Text style={styles.inputLabel}>Doctor</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.doctor}
-                        onChangeText={(text) => setFormData({ ...formData, doctor: text })}
-                        placeholder="Doctor's name"
-                        placeholderTextColor="#999999"
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Doctor</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={formData.doctor}
+                          onChangeText={(text) => setFormData({ ...formData, doctor: text })}
+                          placeholder="Doctor's name"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
-                      <Text style={styles.inputLabel}>Pharmacy</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={formData.pharmacy}
-                        onChangeText={(text) => setFormData({ ...formData, pharmacy: text })}
-                        placeholder="Pharmacy name"
-                        placeholderTextColor="#999999"
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Pharmacy</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={formData.pharmacy}
+                          onChangeText={(text) => setFormData({ ...formData, pharmacy: text })}
+                          placeholder="Pharmacy name"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
-                      <Text style={styles.inputLabel}>Refill Date</Text>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Refill Date</Text>
                       <View style={styles.datePickerContainer}>
                         <TouchableOpacity 
                           style={styles.datePickerButton}
@@ -824,7 +855,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                               : 'Select refill date (optional)'
                             }
                           </Text>
-                          <Ionicons name="calendar-outline" size={20} color="#666666" />
+                          <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
                         </TouchableOpacity>
                         {formData.refill_date && (
                           <TouchableOpacity 
@@ -835,28 +866,31 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                           </TouchableOpacity>
                         )}
                       </View>
+                      </View>
 
-                      <Text style={styles.inputLabel}>Side Effects</Text>
-                      <TextInput
-                        style={[styles.textInput, styles.multilineInput]}
-                        value={formData.side_effects}
-                        onChangeText={(text) => setFormData({ ...formData, side_effects: text })}
-                        placeholder="Known side effects or notes"
-                        placeholderTextColor="#999999"
-                        multiline
-                        numberOfLines={3}
-                      />
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Side Effects</Text>
+                        <TextInput
+                          style={[styles.modalInput, styles.notesInput]}
+                          value={formData.side_effects}
+                          onChangeText={(text) => setFormData({ ...formData, side_effects: text })}
+                          placeholder="Known side effects or notes"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                          multiline
+                          numberOfLines={3}
+                        />
+                      </View>
                     </ScrollView>
 
                     <View style={styles.modalButtons}>
                       <TouchableOpacity
-                        style={styles.cancelButton}
+                        style={styles.modalButton}
                         onPress={() => setShowAddEditModal(false)}
                       >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text style={styles.modalButtonText}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.saveButton}
+                        style={[styles.modalButton, styles.saveButton]}
                         onPress={handleAddMedication}
                       >
                         <Text style={styles.saveButtonText}>
@@ -871,10 +905,10 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
           </TouchableWithoutFeedback>
         </Modal>
 
-        {renderTimePicker()}
-        {renderDatePicker()}
+        {/* Only render time/date pickers when they're visible to prevent blocking interactions */}
+        {showTimePicker && renderTimePicker()}
+        {showDatePicker && renderDatePicker()}
       </LinearGradient>
-    </KeyboardAvoidingView>
   );
 };
 
@@ -1154,67 +1188,68 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    width: '100%',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    maxHeight: '90%',
+    padding: 20,
+    width: '100%',
+    maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
+    marginBottom: 20,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333333',
+    color: '#FFFFFF',
   },
   modalFormContent: {
-    paddingVertical: 20,
+    paddingBottom: 10,
   },
   errorContainer: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: 'rgba(255, 0, 0, 0.2)',
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
   },
   errorText: {
-    color: '#D32F2F',
+    color: '#FF6B6B',
     fontSize: 14,
     marginBottom: 5,
   },
-  inputLabel: {
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: '#FFFFFF',
     marginBottom: 8,
-    marginTop: 15,
   },
-  textInput: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 10,
+  modalInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
     padding: 15,
     fontSize: 16,
-    color: '#333333',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    color: '#FFFFFF',
   },
-  multilineInput: {
+  notesInput: {
+    height: 80,
     textAlignVertical: 'top',
-    minHeight: 80,
   },
   typeSelector: {
     flexDirection: 'row',
@@ -1225,7 +1260,7 @@ const styles = StyleSheet.create({
   typeOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 15,
@@ -1238,7 +1273,7 @@ const styles = StyleSheet.create({
   typeOptionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333333',
+    color: '#FFFFFF',
     marginLeft: 8,
   },
   typeOptionTextSelected: {
@@ -1246,7 +1281,7 @@ const styles = StyleSheet.create({
   },
   dailyPrnSelector: {
     flexDirection: 'row',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 10,
     padding: 5,
     marginBottom: 15,
@@ -1266,7 +1301,7 @@ const styles = StyleSheet.create({
   dailyPrnOptionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333333',
+    color: '#FFFFFF',
     marginLeft: 8,
   },
   dailyPrnOptionTextSelected: {
@@ -1283,8 +1318,8 @@ const styles = StyleSheet.create({
   timeInputButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#667eea',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 15,
     flex: 1,
@@ -1302,8 +1337,8 @@ const styles = StyleSheet.create({
   addTimeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    borderRadius: 10,
+    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+    borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 15,
     justifyContent: 'center',
@@ -1320,18 +1355,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   datePickerButton: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
     padding: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     flex: 1,
   },
   datePickerButtonText: {
-    color: '#333333',
+    color: '#FFFFFF',
     fontSize: 16,
     flex: 1,
   },
@@ -1342,65 +1375,68 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 15,
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    marginHorizontal: 5,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 10,
     padding: 15,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
-    marginRight: 10,
+    marginHorizontal: 5,
   },
   cancelButtonText: {
-    color: '#333333',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    flex: 1,
-    backgroundColor: '#4CAF50',
-    borderRadius: 10,
-    padding: 15,
-    marginLeft: 10,
-    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   saveButtonText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   pickerOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
   pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    width: '90%',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    width: '100%',
     maxHeight: '70%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
+    padding: 20,
   },
   pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 20,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   pickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   pickerContent: {
     maxHeight: 400,
@@ -1409,17 +1445,17 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   pickerOptionSelected: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: 'rgba(102, 126, 234, 0.3)',
   },
   pickerOptionText: {
     fontSize: 16,
-    color: '#333333',
+    color: '#FFFFFF',
   },
   pickerOptionTextSelected: {
-    color: '#1976D2',
+    color: '#667eea',
     fontWeight: '600',
   },
 });

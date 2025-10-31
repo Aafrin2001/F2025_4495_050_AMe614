@@ -149,6 +149,10 @@ export default function App() {
     setCurrentScreen('main');
   };
 
+  const handleBackToChatSelection = () => {
+    setCurrentScreen('chatSelection');
+  };
+
   const handleChatSelection = () => {
     setCurrentScreen('chatSelection');
   };
@@ -236,9 +240,9 @@ export default function App() {
           />
         );
       case 'aiChat':
-        return <AIChatScreen onBack={handleBackToMain} />;
+        return <AIChatScreen onBack={handleBackToChatSelection} />;
       case 'voiceChat':
-        return <VoiceChatScreen onBack={handleBackToMain} />;
+        return <VoiceChatScreen onBack={handleBackToChatSelection} />;
       case 'activities':
         return (
           <ActivityScreen 

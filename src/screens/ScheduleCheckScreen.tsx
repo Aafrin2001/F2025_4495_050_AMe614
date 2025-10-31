@@ -36,8 +36,8 @@ interface ScheduledCheck {
 const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [dateTimePickerTab, setDateTimePickerTab] = useState<'date' | 'time'>('date');
   const [scheduledChecks, setScheduledChecks] = useState<ScheduledCheck[]>([
     {
       id: '1',
@@ -207,7 +207,8 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       ...newCheck,
       date: date.toISOString().split('T')[0]
     });
-    setShowDatePicker(false);
+    // Auto-switch to time picker after selecting date
+    setDateTimePickerTab('time');
   };
 
   const handleTimeChange = (time: Date) => {
@@ -217,113 +218,171 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       ...newCheck,
       time: timeString
     });
-    setShowTimePicker(false);
+    // Close picker after selecting time
+    setShowDateTimePicker(false);
+    setDateTimePickerTab('date'); // Reset to date tab for next time
   };
 
-  // Custom Date Picker Component
-  const renderDatePicker = () => (
+  const openDateTimePicker = () => {
+    // If date is already selected, start with time tab, otherwise date tab
+    setDateTimePickerTab(newCheck.date ? 'time' : 'date');
+    setShowDateTimePicker(true);
+  };
+
+  // Combined Date & Time Picker Component with Tabs
+  const renderDateTimePicker = () => (
     <Modal
-      visible={showDatePicker}
+      visible={showDateTimePicker}
       transparent={true}
       animationType="slide"
-      onRequestClose={() => setShowDatePicker(false)}
+      onRequestClose={() => {
+        setShowDateTimePicker(false);
+        setDateTimePickerTab('date');
+      }}
     >
-      <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+      <TouchableWithoutFeedback onPress={() => {
+        setShowDateTimePicker(false);
+        setDateTimePickerTab('date');
+      }}>
         <View style={styles.pickerOverlay}>
           <TouchableWithoutFeedback onPress={() => {}}>
             <View style={styles.pickerContainer}>
-          <View style={styles.pickerHeader}>
-            <Text style={styles.pickerTitle}>Select Date</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-              <Ionicons name="close" size={24} color="#666666" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.pickerContent}>
-            {Array.from({ length: 365 }, (_, i) => {
-              const date = new Date();
-              date.setDate(date.getDate() + i);
-              const isSelected = selectedDate.toDateString() === date.toDateString();
-              
-              return (
+              <View style={styles.pickerHeader}>
+                <Text style={styles.pickerTitle}>Select Date & Time</Text>
+                <TouchableOpacity onPress={() => {
+                  setShowDateTimePicker(false);
+                  setDateTimePickerTab('date');
+                }}>
+                  <Ionicons name="close" size={24} color="#666666" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Tab Switcher */}
+              <View style={styles.tabContainer}>
                 <TouchableOpacity
-                  key={i}
                   style={[
-                    styles.pickerOption,
-                    isSelected && styles.pickerOptionSelected
+                    styles.tabButton,
+                    dateTimePickerTab === 'date' && styles.tabButtonActive
                   ]}
-                  onPress={() => handleDateChange(date)}
+                  onPress={() => setDateTimePickerTab('date')}
                 >
+                  <Ionicons 
+                    name="calendar-outline" 
+                    size={20} 
+                    color={dateTimePickerTab === 'date' ? '#FFFFFF' : '#666666'} 
+                  />
                   <Text style={[
-                    styles.pickerOptionText,
-                    isSelected && styles.pickerOptionTextSelected
+                    styles.tabButtonText,
+                    dateTimePickerTab === 'date' && styles.tabButtonTextActive
                   ]}>
-                    {date.toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
+                    Date
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
+                <TouchableOpacity
+                  style={[
+                    styles.tabButton,
+                    dateTimePickerTab === 'time' && styles.tabButtonActive
+                  ]}
+                  onPress={() => setDateTimePickerTab('time')}
+                >
+                  <Ionicons 
+                    name="time-outline" 
+                    size={20} 
+                    color={dateTimePickerTab === 'time' ? '#FFFFFF' : '#666666'} 
+                  />
+                  <Text style={[
+                    styles.tabButtonText,
+                    dateTimePickerTab === 'time' && styles.tabButtonTextActive
+                  ]}>
+                    Time
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-  // Custom Time Picker Component
-  const renderTimePicker = () => (
-    <Modal
-      visible={showTimePicker}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowTimePicker(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
-        <View style={styles.pickerOverlay}>
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={styles.pickerContainer}>
-          <View style={styles.pickerHeader}>
-            <Text style={styles.pickerTitle}>Select Time</Text>
-            <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-              <Ionicons name="close" size={24} color="#666666" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.pickerContent}>
-            {Array.from({ length: 24 }, (_, hour) => {
-              return Array.from({ length: 4 }, (_, minuteIndex) => {
-                const minute = minuteIndex * 15; // 0, 15, 30, 45
-                const time = new Date();
-                time.setHours(hour, minute, 0, 0);
-                const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
-                const isSelected = newCheck.time === timeString;
-                
-                return (
+              {/* Date Picker Content */}
+              {dateTimePickerTab === 'date' && (
+                <ScrollView style={styles.pickerContent}>
+                  {Array.from({ length: 365 }, (_, i) => {
+                    const date = new Date();
+                    date.setDate(date.getDate() + i);
+                    const isSelected = selectedDate.toDateString() === date.toDateString();
+                    
+                    return (
+                      <TouchableOpacity
+                        key={i}
+                        style={[
+                          styles.pickerOption,
+                          isSelected && styles.pickerOptionSelected
+                        ]}
+                        onPress={() => handleDateChange(date)}
+                      >
+                        <Text style={[
+                          styles.pickerOptionText,
+                          isSelected && styles.pickerOptionTextSelected
+                        ]}>
+                          {date.toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              {/* Time Picker Content */}
+              {dateTimePickerTab === 'time' && (
+                <ScrollView style={styles.pickerContent}>
+                  {Array.from({ length: 24 }, (_, hour) => {
+                    return Array.from({ length: 4 }, (_, minuteIndex) => {
+                      const minute = minuteIndex * 15; // 0, 15, 30, 45
+                      const time = new Date();
+                      time.setHours(hour, minute, 0, 0);
+                      const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
+                      const isSelected = newCheck.time === timeString;
+                      
+                      return (
+                        <TouchableOpacity
+                          key={`${hour}-${minute}`}
+                          style={[
+                            styles.pickerOption,
+                            isSelected && styles.pickerOptionSelected
+                          ]}
+                          onPress={() => handleTimeChange(time)}
+                        >
+                          <Text style={[
+                            styles.pickerOptionText,
+                            isSelected && styles.pickerOptionTextSelected
+                          ]}>
+                            {timeString}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    });
+                  })}
+                </ScrollView>
+              )}
+
+              {/* Show selected date/time summary */}
+              <View style={styles.pickerSummary}>
+                <Text style={styles.pickerSummaryText}>
+                  Selected: {newCheck.date ? formatDate(newCheck.date) : 'No date'} at {newCheck.time || 'No time'}
+                </Text>
+                {(newCheck.date && newCheck.time) && (
                   <TouchableOpacity
-                    key={`${hour}-${minute}`}
-                    style={[
-                      styles.pickerOption,
-                      isSelected && styles.pickerOptionSelected
-                    ]}
-                    onPress={() => handleTimeChange(time)}
+                    style={styles.pickerDoneButton}
+                    onPress={() => {
+                      setShowDateTimePicker(false);
+                      setDateTimePickerTab('date');
+                    }}
                   >
-                    <Text style={[
-                      styles.pickerOptionText,
-                      isSelected && styles.pickerOptionTextSelected
-                    ]}>
-                      {timeString}
-                    </Text>
+                    <Text style={styles.pickerDoneButtonText}>Done</Text>
                   </TouchableOpacity>
-                );
-              });
-            })}
-          </ScrollView>
+                )}
+              </View>
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -504,31 +563,24 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
                   </View>
                 </View>
 
-                <View style={styles.formRow}>
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Date *</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Text style={styles.pickerButtonText}>
-                        {newCheck.date || 'Select Date'}
-                      </Text>
-                      <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.formGroup}>
-                    <Text style={styles.formLabel}>Time *</Text>
-                    <TouchableOpacity
-                      style={styles.pickerButton}
-                      onPress={() => setShowTimePicker(true)}
-                    >
-                      <Text style={styles.pickerButtonText}>
-                        {newCheck.time || 'Select Time'}
-                      </Text>
-                      <Ionicons name="time-outline" size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Date & Time *</Text>
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={openDateTimePicker}
+                  >
+                    <View style={styles.pickerButtonContent}>
+                      <View>
+                        <Text style={styles.pickerButtonText}>
+                          {newCheck.date || 'Select Date'}
+                        </Text>
+                        <Text style={styles.pickerButtonSubText}>
+                          {newCheck.time || 'Select Time'}
+                        </Text>
+                      </View>
+                      <Ionicons name="calendar-outline" size={24} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.formGroup}>
@@ -566,11 +618,8 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
           </View>
         )}
 
-        {/* Date Picker */}
-        {renderDatePicker()}
-
-        {/* Time Picker */}
-        {renderTimePicker()}
+        {/* Combined Date & Time Picker */}
+        {renderDateTimePicker()}
       </LinearGradient>
     </KeyboardAvoidingView>
   );
@@ -793,9 +842,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  pickerButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flex: 1,
+  },
   pickerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  pickerButtonSubText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
   },
   modalInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -909,6 +970,63 @@ const styles = StyleSheet.create({
   },
   pickerOptionTextSelected: {
     color: '#1976D2',
+    fontWeight: '600',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    backgroundColor: 'transparent',
+  },
+  tabButtonActive: {
+    backgroundColor: '#667eea',
+  },
+  tabButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666666',
+    marginLeft: 8,
+  },
+  tabButtonTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  pickerSummary: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#F8F9FA',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  pickerSummaryText: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  pickerDoneButton: {
+    backgroundColor: '#667eea',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  pickerDoneButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

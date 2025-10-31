@@ -14,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,12 +49,23 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   });
   const [formErrors, setFormErrors] = useState<string[]>([]);
   
-  // Time picker state
+  // Schedule setup modal state (shown after medication creation)
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [newlyCreatedMedication, setNewlyCreatedMedication] = useState<Medication | null>(null);
+  const [scheduleData, setScheduleData] = useState({
+    startDate: '',
+    times: [] as string[],
+    refillDate: '',
+  });
+  
+  // Time picker state for schedule modal
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
   
-  // Date picker state
+  // Date picker state for schedule modal
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'refill'>('start');
+  const [tempDate, setTempDate] = useState<Date>(new Date());
   
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const scheduleScrollViewRef = useRef<ScrollView>(null);
@@ -122,6 +134,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   };
 
   const resetForm = () => {
+    setEditingMedication(null); // Clear editing state
     setFormData({
       name: '',
       dosage: '',
@@ -140,10 +153,29 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   };
 
   const handleAddMedication = async () => {
-    // Validate form
-    const validation = MedicationService.validateMedicationInput(formData);
-    if (!validation.isValid) {
-      setFormErrors(validation.errors);
+    // Validate form (custom validation that doesn't require times for new medications)
+    const errors: string[] = [];
+    
+    if (!formData.name || formData.name.trim().length === 0) {
+      errors.push('Medication name is required');
+    }
+    
+    if (!formData.dosage || formData.dosage.trim().length === 0) {
+      errors.push('Dosage is required');
+    }
+    
+    if (!formData.type) {
+      errors.push('Medication type is required');
+    }
+    
+    if (!formData.frequency || formData.frequency.trim().length === 0) {
+      errors.push('Frequency is required');
+    }
+    
+    // Times are not validated in the form - they're managed separately in schedule screen
+    
+    if (errors.length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -154,31 +186,56 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
       return;
     }
 
-    const medicationToSave: MedicationInput = {
-      ...formData,
-      time: formData.is_daily ? formData.time : [], // Clear times if PRN
-      refill_date: formData.refill_date || undefined,
-      instruction: formData.instruction?.trim() || undefined,
-      doctor: formData.doctor?.trim() || undefined,
-      pharmacy: formData.pharmacy?.trim() || undefined,
-      side_effects: formData.side_effects?.trim() || undefined,
-    };
+     const medicationToSave: MedicationInput = {
+       ...formData,
+       time: [], // Don't save times in initial form - will be set in schedule modal
+       refill_date: undefined, // Don't save refill_date in initial form - will be set in schedule modal
+       instruction: formData.instruction?.trim() || undefined,
+       doctor: formData.doctor?.trim() || undefined,
+       pharmacy: formData.pharmacy?.trim() || undefined,
+       side_effects: formData.side_effects?.trim() || undefined,
+     };
 
     let result;
     if (editingMedication) {
+      // For editing, keep existing times and refill_date (don't allow changing in form)
+      // Times and dates should be managed through schedule screen
+      medicationToSave.time = editingMedication.time; // Keep existing times
+      medicationToSave.refill_date = editingMedication.refill_date || undefined; // Keep existing refill_date
       result = await MedicationService.updateMedication(editingMedication.id, medicationToSave);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Medication updated successfully!');
+        setShowAddEditModal(false);
+        setEditingMedication(null);
+        resetForm();
+        loadData();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update medication.');
+      }
     } else {
+      // For new medications, create without times, then show schedule modal
       result = await MedicationService.saveMedication(medicationToSave);
-    }
-
-    if (result.success) {
-      Alert.alert('Success', `Medication ${editingMedication ? 'updated' : 'added'} successfully!`);
-      setShowAddEditModal(false);
-      setEditingMedication(null);
-      resetForm();
-      loadData();
-    } else {
-      Alert.alert('Error', result.error || `Failed to ${editingMedication ? 'update' : 'add'} medication.`);
+      
+      if (result.success && result.data) {
+        setShowAddEditModal(false);
+        resetForm();
+        // Show schedule setup modal for new daily medications
+        if (formData.is_daily) {
+          setNewlyCreatedMedication(result.data);
+          setScheduleData({
+            startDate: '',
+            times: [],
+            refillDate: '',
+          });
+          setShowScheduleModal(true);
+        } else {
+          Alert.alert('Success', 'Medication added successfully!');
+          loadData();
+        }
+      } else {
+        Alert.alert('Error', result.error || 'Failed to add medication.');
+      }
     }
   };
 
@@ -193,7 +250,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
       instruction: medication.instruction || '',
       doctor: medication.doctor || '',
       pharmacy: medication.pharmacy || '',
-      refill_date: medication.refill_date || '',
+      refill_date: medication.refill_date || '', // Keep for backward compatibility but won't show in form
       side_effects: medication.side_effects || '',
       is_active: medication.is_active,
       is_daily: medication.is_daily,
@@ -249,9 +306,6 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     );
   };
 
-  const clearRefillDate = () => {
-    setFormData({ ...formData, refill_date: '' });
-  };
 
   const addTimeSlot = () => {
     // Open time picker to add a new time
@@ -260,22 +314,98 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   };
 
   const removeTimeSlot = (index: number) => {
-    setFormData({
-      ...formData,
-      time: formData.time.filter((_, i) => i !== index),
-    });
+    if (showScheduleModal) {
+      setScheduleData({
+        ...scheduleData,
+        times: scheduleData.times.filter((_, i) => i !== index),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        time: formData.time.filter((_, i) => i !== index),
+      });
+    }
   };
 
   const updateTimeSlot = (index: number, time: string) => {
-    const newTimes = [...formData.time];
-    newTimes[index] = time;
-    setFormData({
-      ...formData,
-      time: newTimes,
+    if (showScheduleModal) {
+      const newTimes = [...scheduleData.times];
+      newTimes[index] = time;
+      setScheduleData({
+        ...scheduleData,
+        times: newTimes,
+      });
+    } else {
+      const newTimes = [...formData.time];
+      newTimes[index] = time;
+      setFormData({
+        ...formData,
+        time: newTimes,
+      });
+    }
+  };
+
+  const addScheduleTime = () => {
+    setEditingTimeIndex(null);
+    setShowTimePicker(true);
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleData.startDate) {
+      Alert.alert('Validation Error', 'Please select a start date.');
+      return;
+    }
+
+    if (scheduleData.times.length === 0) {
+      Alert.alert('Validation Error', 'Please add at least one time for daily medication.');
+      return;
+    }
+
+    if (!newlyCreatedMedication) {
+      Alert.alert('Error', 'Medication not found.');
+      return;
+    }
+
+    // Update medication with schedule data
+    const result = await MedicationService.updateMedication(newlyCreatedMedication.id, {
+      time: scheduleData.times,
+      // Store refill date (start date is used for scheduling but not stored in database currently)
+      refill_date: scheduleData.refillDate || undefined,
     });
+
+    if (result.success) {
+      Alert.alert('Success', 'Medication schedule set successfully!');
+      setShowScheduleModal(false);
+      setNewlyCreatedMedication(null);
+      setScheduleData({ startDate: '', times: [], refillDate: '' });
+      loadData();
+    } else {
+      Alert.alert('Error', result.error || 'Failed to set medication schedule.');
+    }
+  };
+
+  const handleSkipSchedule = () => {
+    Alert.alert(
+      'Skip Schedule',
+      'You can set the schedule later by editing this medication.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Skip',
+          onPress: () => {
+            setShowScheduleModal(false);
+            setNewlyCreatedMedication(null);
+            setScheduleData({ startDate: '', times: [], refillDate: '' });
+            loadData();
+          },
+        },
+      ]
+    );
   };
 
   const renderTimePicker = () => {
+    const times = showScheduleModal ? scheduleData.times : formData.time;
+    
     return (
       <Modal
         visible={showTimePicker}
@@ -303,7 +433,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                   return Array.from({ length: 4 }, (_, minuteIndex) => {
                     const minute = minuteIndex * 15; // 0, 15, 30, 45
                     const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    const isSelected = editingTimeIndex !== null && formData.time[editingTimeIndex] === timeString;
+                    const isSelected = editingTimeIndex !== null && times[editingTimeIndex] === timeString;
                     
                     return (
                       <TouchableOpacity
@@ -318,10 +448,17 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                             updateTimeSlot(editingTimeIndex, timeString);
                           } else {
                             // Adding new time
-                            setFormData({
-                              ...formData,
-                              time: [...formData.time, timeString],
-                            });
+                            if (showScheduleModal) {
+                              setScheduleData({
+                                ...scheduleData,
+                                times: [...scheduleData.times, timeString],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                time: [...formData.time, timeString],
+                              });
+                            }
                           }
                           setShowTimePicker(false);
                           setEditingTimeIndex(null);
@@ -346,65 +483,122 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     );
   };
 
-  const renderDatePicker = () => (
-    <Modal
-      visible={showDatePicker}
-      transparent={true}
-      animationType="slide"
-      presentationStyle="overFullScreen"
-      onRequestClose={() => setShowDatePicker(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
-        <View style={styles.pickerOverlay}>
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <Text style={styles.pickerTitle}>Select Refill Date</Text>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      const dateString = selectedDate.toISOString().split('T')[0];
+      
+      if (showScheduleModal) {
+        if (datePickerMode === 'start') {
+          setScheduleData({ ...scheduleData, startDate: dateString });
+        } else {
+          setScheduleData({ ...scheduleData, refillDate: dateString });
+        }
+        
+        // On iOS, close after selection
+        if (Platform.OS === 'ios') {
+          setShowDatePicker(false);
+        }
+      }
+    } else if (Platform.OS === 'android') {
+      // User cancelled on Android
+      setShowDatePicker(false);
+    }
+  };
+
+  const renderDatePicker = () => {
+    // Get current selected date or use today as default
+    let initialDate = new Date();
+    if (showScheduleModal) {
+      if (datePickerMode === 'start' && scheduleData.startDate) {
+        initialDate = new Date(scheduleData.startDate);
+      } else if (datePickerMode === 'refill' && scheduleData.refillDate) {
+        initialDate = new Date(scheduleData.refillDate);
+      }
+    }
+    
+    // On Android, show native picker directly (calendar on newer Android versions)
+    if (Platform.OS === 'android') {
+      if (!showDatePicker) return null;
+      
+      return (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          minimumDate={new Date()} // Prevent selecting past dates
+        />
+      );
+    }
+    
+    // On iOS, show in modal
+    return (
+      <Modal
+        visible={showDatePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+          <View style={styles.pickerOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.iosPickerContainer}>
+                <View style={styles.iosPickerHeader}>
+                  <Text style={styles.iosPickerTitle}>
+                    {showScheduleModal 
+                      ? (datePickerMode === 'start' ? 'Select Start Date' : 'Select Refill Date')
+                      : 'Select Refill Date'}
+                  </Text>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Ionicons name="close" size={24} color="#666666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerWrapper}>
+                  <DateTimePicker
+                    value={tempDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    onChange={(event, date) => {
+                      if (date) {
+                        setTempDate(date);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                    style={styles.datePicker}
+                  />
+                </View>
+                
+                <View style={styles.pickerFooter}>
+                  <TouchableOpacity
+                    style={styles.pickerDoneButton}
+                    onPress={() => {
+                      const dateString = tempDate.toISOString().split('T')[0];
+                      if (showScheduleModal) {
+                        if (datePickerMode === 'start') {
+                          setScheduleData({ ...scheduleData, startDate: dateString });
+                        } else {
+                          setScheduleData({ ...scheduleData, refillDate: dateString });
+                        }
+                      }
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={styles.pickerDoneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              
-              <ScrollView style={styles.pickerContent}>
-                {Array.from({ length: 365 }, (_, i) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() + i);
-                  const dateString = date.toISOString().split('T')[0];
-                  const isSelected = formData.refill_date === dateString;
-                  
-                  return (
-                    <TouchableOpacity
-                      key={dateString}
-                      style={[
-                        styles.pickerOption,
-                        isSelected && styles.pickerOptionSelected
-                      ]}
-                      onPress={() => {
-                        setFormData({ ...formData, refill_date: dateString });
-                        setShowDatePicker(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.pickerOptionText,
-                        isSelected && styles.pickerOptionTextSelected
-                      ]}>
-                        {date.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
 
   const renderMedicationCard = (medication: Medication) => (
     <View key={medication.id} style={styles.medicationCard}>
@@ -520,6 +714,168 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     );
   }
 
+  // If schedule modal should be shown, render full screen schedule view instead
+  if (showScheduleModal) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.scheduleScreenHeader}>
+          <TouchableOpacity onPress={handleSkipSchedule} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Set Medication Schedule</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          style={styles.flex1}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scheduleScreenContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.infoBox}>
+              <Ionicons name="medical-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.infoText}>
+                {newlyCreatedMedication?.name} - {newlyCreatedMedication?.dosage}
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Start Date *</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  setDatePickerMode('start');
+                  // Set initial date from scheduleData or today
+                  const initialDate = scheduleData.startDate 
+                    ? new Date(scheduleData.startDate) 
+                    : new Date();
+                  setTempDate(initialDate);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {scheduleData.startDate 
+                    ? new Date(scheduleData.startDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'Select start date'
+                  }
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Refill Date (Optional)</Text>
+              <View style={styles.datePickerContainer}>
+                <TouchableOpacity 
+                  style={styles.datePickerButton}
+                  onPress={() => {
+                    setDatePickerMode('refill');
+                    // Set initial date from scheduleData or today
+                    const initialDate = scheduleData.refillDate 
+                      ? new Date(scheduleData.refillDate) 
+                      : new Date();
+                    setTempDate(initialDate);
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Text style={styles.datePickerButtonText}>
+                    {scheduleData.refillDate 
+                      ? new Date(scheduleData.refillDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'Select refill date (optional)'
+                    }
+                  </Text>
+                  <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+                {scheduleData.refillDate && (
+                  <TouchableOpacity 
+                    style={styles.clearDateButton}
+                    onPress={() => setScheduleData({ ...scheduleData, refillDate: '' })}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#FF6B6B" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Daily Times *</Text>
+              <Text style={styles.formSubLabel}>When should this medication be taken each day?</Text>
+              <View style={styles.timesInputContainer}>
+                {scheduleData.times.map((time, index) => (
+                  <View key={index} style={styles.timeInputRow}>
+                    <TouchableOpacity
+                      style={styles.timeInputButton}
+                      onPress={() => {
+                        setEditingTimeIndex(index);
+                        setShowTimePicker(true);
+                      }}
+                    >
+                      <Text style={styles.timeInputText}>
+                        {MedicationService.formatTime(time)}
+                      </Text>
+                      <Ionicons name="time-outline" size={16} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.removeTimeButton}
+                      onPress={() => removeTimeSlot(index)}
+                    >
+                      <Ionicons name="close" size={16} color="#FF6B6B" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                
+                <TouchableOpacity
+                  style={styles.addTimeButton}
+                  onPress={addScheduleTime}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add" size={16} color="#4CAF50" />
+                  <Text style={styles.addTimeText}>Add Time</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.scheduleScreenButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.skipButton]}
+                onPress={handleSkipSchedule}
+              >
+                <Text style={styles.skipButtonText}>Skip for Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleSaveSchedule}
+              >
+                <Text style={styles.saveButtonText}>Save Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        {/* Date and Time Pickers */}
+        {showTimePicker && renderTimePicker()}
+        {showDatePicker && renderDatePicker()}
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       <StatusBar style="light" />
@@ -619,7 +975,10 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
           visible={showAddEditModal}
           transparent={true}
           animationType="slide"
-          onRequestClose={() => setShowAddEditModal(false)}
+          onRequestClose={() => {
+            setShowAddEditModal(false);
+            resetForm(); // Reset form when modal closes
+          }}
         >
           <TouchableWithoutFeedback onPress={dismissKeyboard}>
             <View style={styles.modalOverlay}>
@@ -634,7 +993,10 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                       <Text style={styles.modalTitle}>
                         {editingMedication ? 'Edit Medication' : 'Add New Medication'}
                       </Text>
-                      <TouchableOpacity onPress={() => setShowAddEditModal(false)}>
+                      <TouchableOpacity onPress={() => {
+                        setShowAddEditModal(false);
+                        resetForm(); // Reset form when closing
+                      }}>
                         <Ionicons name="close" size={24} color="#FFFFFF" />
                       </TouchableOpacity>
                     </View>
@@ -760,47 +1122,15 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                         </View>
                       </View>
 
-                      {/* Time Selection for Daily Medications */}
+                      {/* Note: Schedule (date started and times) will be set after medication creation or can be edited later */}
                       {formData.is_daily && (
-                        <View style={styles.formGroup}>
-                          <Text style={styles.formLabel}>Times *</Text>
-                          <View style={styles.timesInputContainer}>
-                            {formData.time.map((time, index) => (
-                              <View key={index} style={styles.timeInputRow}>
-                                <TouchableOpacity
-                                  style={styles.timeInputButton}
-                                  onPress={() => {
-                                    setEditingTimeIndex(index);
-                                    setShowTimePicker(true);
-                                  }}
-                                >
-                                  <Text style={styles.timeInputText}>
-                                    {MedicationService.formatTime(time)}
-                                  </Text>
-                                  <Ionicons name="time-outline" size={16} color="#FFFFFF" />
-                                </TouchableOpacity>
-                                
-                                <TouchableOpacity
-                                  style={styles.removeTimeButton}
-                                  onPress={() => removeTimeSlot(index)}
-                                >
-                                  <Ionicons name="close" size={16} color="#FF6B6B" />
-                                </TouchableOpacity>
-                              </View>
-                            ))}
-                            
-                            <TouchableOpacity
-                              style={styles.addTimeButton}
-                              onPress={() => {
-                                setEditingTimeIndex(null);
-                                setShowTimePicker(true);
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Ionicons name="add" size={16} color="#4CAF50" />
-                              <Text style={styles.addTimeText}>Add Time</Text>
-                            </TouchableOpacity>
-                          </View>
+                        <View style={styles.infoBox}>
+                          <Ionicons name="information-circle-outline" size={20} color="#FFFFFF" />
+                          <Text style={styles.infoText}>
+                            {editingMedication 
+                              ? 'To change the schedule (start date and times), please use the schedule management feature.'
+                              : 'After creating this medication, you\'ll be able to set the start date and daily times.'}
+                          </Text>
                         </View>
                       )}
 
@@ -840,37 +1170,6 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                       </View>
 
                       <View style={styles.formGroup}>
-                        <Text style={styles.formLabel}>Refill Date</Text>
-                      <View style={styles.datePickerContainer}>
-                        <TouchableOpacity 
-                          style={styles.datePickerButton}
-                          onPress={() => setShowDatePicker(true)}
-                        >
-                          <Text style={styles.datePickerButtonText}>
-                            {formData.refill_date 
-                              ? new Date(formData.refill_date).toLocaleDateString('en-US', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })
-                              : 'Select refill date (optional)'
-                            }
-                          </Text>
-                          <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
-                        </TouchableOpacity>
-                        {formData.refill_date && (
-                          <TouchableOpacity 
-                            style={styles.clearDateButton}
-                            onPress={clearRefillDate}
-                          >
-                            <Ionicons name="close-circle" size={20} color="#FF6B6B" />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      </View>
-
-                      <View style={styles.formGroup}>
                         <Text style={styles.formLabel}>Side Effects</Text>
                         <TextInput
                           style={[styles.modalInput, styles.notesInput]}
@@ -887,7 +1186,10 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                       <View style={styles.modalButtons}>
                         <TouchableOpacity
                           style={styles.modalButton}
-                          onPress={() => setShowAddEditModal(false)}
+                          onPress={() => {
+                            setShowAddEditModal(false);
+                            resetForm(); // Reset form on cancel
+                          }}
                         >
                           <Text style={styles.modalButtonText}>Cancel</Text>
                         </TouchableOpacity>
@@ -1416,6 +1718,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  infoBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  infoText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 10,
+    flex: 1,
+  },
+  formSubLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 10,
+    marginTop: -5,
+  },
+  skipButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  skipButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
   pickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1461,6 +1791,79 @@ const styles = StyleSheet.create({
   },
   pickerOptionTextSelected: {
     color: '#667eea',
+    fontWeight: '600',
+  },
+  flex1: {
+    flex: 1,
+  },
+  scheduleScreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  scheduleScreenContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  scheduleScreenButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  iosPickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 0,
+    maxHeight: '80%',
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  iosPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  datePickerWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    minHeight: 200,
+  },
+  datePicker: {
+    width: '100%',
+    height: Platform.OS === 'ios' ? 200 : 'auto',
+  },
+  pickerFooter: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  pickerDoneButton: {
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+  },
+  pickerDoneButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

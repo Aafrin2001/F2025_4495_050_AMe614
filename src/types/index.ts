@@ -12,6 +12,8 @@ export interface User {
   email: string;
   phoneNumber?: string;
   userType: 'hire' | 'offer' | 'both';
+  seniorEmail?: string; // For caregivers: email of the senior they're monitoring
+  seniorUserId?: string; // For caregivers: ID of the senior they're monitoring
 }
 
 export interface AuthState {

@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../lib/supabase';
 import { AuthError, User } from '../types';
+import { CaregiverService } from '../lib/caregiverService';
 
 interface AuthScreenProps {
   onLogin: (user: User) => void;
@@ -29,6 +30,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [userType, setUserType] = React.useState<'hire' | 'offer'>('hire');
   const [isLoading, setIsLoading] = React.useState(false);
+  const [seniorEmail, setSeniorEmail] = React.useState('');
+  const [showSeniorEmailInput, setShowSeniorEmailInput] = React.useState(false);
 
   const handleAuth = async () => {
     if (isLogin) {
@@ -48,6 +51,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         }
         
         if (data?.user) {
+          const loggedInUserType = data.user.user_metadata?.userType || 'hire';
+          
+          // If user is a caregiver, ask for senior email
+          if (loggedInUserType === 'offer') {
+            setShowSeniorEmailInput(true);
+            setIsLoading(false);
+            return; // Don't proceed with login yet, wait for senior email
+          }
+          
           // Convert Supabase user to our User type
           const userData: User = {
             id: data.user.id,
@@ -55,7 +67,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             lastName: data.user.user_metadata?.lastName || '',
             email: data.user.email || '',
             phoneNumber: data.user.user_metadata?.phoneNumber,
-            userType: data.user.user_metadata?.userType || 'hire'
+            userType: loggedInUserType
           };
           
           Alert.alert('Success', 'Login successful!', [
@@ -112,6 +124,123 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const handleSeniorEmailSubmit = async () => {
+    if (!seniorEmail || !email || !password) {
+      Alert.alert('Error', 'Please enter the senior\'s email address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Find senior user by email
+      const seniorResult = await CaregiverService.findSeniorByEmail(seniorEmail.trim());
+      
+      if (!seniorResult.success || !seniorResult.userId) {
+        Alert.alert(
+          'Senior Not Found',
+          seniorResult.error || 'Could not find a user with that email. Please ensure the senior has an account.',
+          [
+            { text: 'OK', onPress: () => setIsLoading(false) }
+          ]
+        );
+        return;
+      }
+
+      // Get current user (we already logged in)
+      const { data: userData } = await auth.getCurrentUser();
+      
+      if (!userData?.user) {
+        Alert.alert('Error', 'Could not retrieve user information');
+        setIsLoading(false);
+        return;
+      }
+
+      // Request caregiver access (creates pending relationship)
+      const requestResult = await CaregiverService.requestAccess(
+        seniorEmail.trim(),
+        userData.user.id,
+        userData.user.email || ''
+      );
+
+      if (!requestResult.success) {
+        Alert.alert(
+          'Request Failed',
+          requestResult.error || 'Could not create access request. The senior may need to approve your request first.',
+          [
+            { text: 'OK', onPress: () => setIsLoading(false) }
+          ]
+        );
+        return;
+      }
+
+      // Verify access (check if already approved)
+      const verifyResult = await CaregiverService.verifyAccess(
+        userData.user.id,
+        seniorEmail.trim()
+      );
+
+      if (verifyResult.success && verifyResult.relationship) {
+        // Already approved - proceed with login
+        const user: User = {
+          id: userData.user.id,
+          firstName: userData.user.user_metadata?.firstName || '',
+          lastName: userData.user.user_metadata?.lastName || '',
+          email: userData.user.email || '',
+          phoneNumber: userData.user.user_metadata?.phoneNumber,
+          userType: userData.user.user_metadata?.userType || 'offer',
+          seniorEmail: verifyResult.relationship.senior_email,
+          seniorUserId: verifyResult.relationship.senior_id || undefined
+        };
+        
+        Alert.alert('Success', 'Access approved! Connected to senior account.', [
+          { text: 'OK', onPress: () => {
+            setShowSeniorEmailInput(false);
+            onLogin(user);
+          }}
+        ]);
+      } else {
+        // Pending approval - show message
+        Alert.alert(
+          'Access Request Sent',
+          `A request has been sent to ${seniorEmail.trim()}. The senior will need to approve your access before you can view their information.\n\nVerification Code: ${requestResult.verificationCode}\n\nPlease ask the senior to approve your request or provide this code for verification.`,
+          [
+            { 
+              text: 'OK', 
+              onPress: () => {
+                setShowSeniorEmailInput(false);
+                setSeniorEmail('');
+                // Show pending access message
+                Alert.alert(
+                  'Pending Approval',
+                  'You will be able to access the dashboard once the senior approves your request.',
+                  [
+                    { text: 'OK', onPress: () => {
+                      // Still log them in but show limited access
+                      const user: User = {
+                        id: userData.user.id,
+                        firstName: userData.user.user_metadata?.firstName || '',
+                        lastName: userData.user.user_metadata?.lastName || '',
+                        email: userData.user.email || '',
+                        phoneNumber: userData.user.user_metadata?.phoneNumber,
+                        userType: userData.user.user_metadata?.userType || 'offer',
+                        seniorEmail: seniorEmail.trim(),
+                      };
+                      onLogin(user);
+                    }}
+                  ]
+                );
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred while connecting to senior account');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -246,7 +375,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </>
           )}
 
-          {isLogin && (
+          {isLogin && !showSeniorEmailInput && (
             <>
               <View style={styles.inputContainer}>
                 <View style={styles.inputWithIcon}>
@@ -276,19 +405,57 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </>
           )}
 
+          {isLogin && showSeniorEmailInput && (
+            <>
+              <View style={styles.seniorEmailContainer}>
+                <Text style={styles.seniorEmailTitle}>Connect to Senior Account</Text>
+                <Text style={styles.seniorEmailSubtitle}>
+                  Please enter the email address of the senior you are monitoring
+                </Text>
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputWithIcon}>
+                    <Ionicons name="person-outline" size={20} color="rgba(255, 255, 255, 0.7)" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.inputWithIconText}
+                      placeholder="Senior's Email Address"
+                      placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                      value={seniorEmail}
+                      onChangeText={setSeniorEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                  </View>
+                </View>
+              </View>
+            </>
+          )}
+
           <TouchableOpacity 
             style={[styles.authButton, isLoading && styles.authButtonDisabled]} 
-            onPress={handleAuth}
+            onPress={showSeniorEmailInput ? handleSeniorEmailSubmit : handleAuth}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#667eea" size="small" />
             ) : (
               <Text style={styles.authButtonText}>
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {showSeniorEmailInput ? 'Connect' : isLogin ? 'Sign In' : 'Create Account'}
               </Text>
             )}
           </TouchableOpacity>
+
+          {showSeniorEmailInput && (
+            <TouchableOpacity
+              style={styles.backToLoginButton}
+              onPress={() => {
+                setShowSeniorEmailInput(false);
+                setSeniorEmail('');
+              }}
+            >
+              <Text style={styles.backToLoginButtonText}>Back to Login</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.switchButton}
@@ -448,6 +615,31 @@ const styles = StyleSheet.create({
   switchButtonText: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 16,
+  },
+  seniorEmailContainer: {
+    marginBottom: 20,
+  },
+  seniorEmailTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  seniorEmailSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  backToLoginButton: {
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  backToLoginButtonText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    textDecorationLine: 'underline',
   },
 });
 

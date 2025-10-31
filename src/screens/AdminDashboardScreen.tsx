@@ -18,11 +18,12 @@ import { AdminDashboardService, AdminDashboardStats, HealthTrend, MedicationAler
 
 interface AdminDashboardScreenProps {
   onBack: () => void;
+  userId?: string; // Optional: for caregivers viewing senior's dashboard
 }
 
 const { width } = Dimensions.get('window');
 
-const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) => {
+const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, userId }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('7d');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -892,6 +892,26 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
       >
+          {/* Today's Schedule */}
+          <View style={styles.scheduleContainer}>
+            <Text style={styles.sectionTitle}>Today's Schedule</Text>
+            {todaySchedule.length === 0 ? (
+              <View style={styles.emptySchedule}>
+                <Ionicons name="calendar-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
+                <Text style={styles.emptyScheduleText}>No medications scheduled for today</Text>
+              </View>
+            ) : (
+              <ScrollView 
+                ref={scheduleScrollViewRef}
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scheduleScrollContent}
+              >
+                {todaySchedule.map(renderScheduleItem)}
+              </ScrollView>
+            )}
+          </View>
+
           {/* Statistics Overview */}
           <View style={styles.statsContainer}>
             <Text style={styles.sectionTitle}>Overview</Text>
@@ -921,26 +941,6 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                 <Text style={styles.statLabel}>PRN Used Today</Text>
               </View>
             </View>
-          </View>
-
-          {/* Today's Schedule */}
-          <View style={styles.scheduleContainer}>
-            <Text style={styles.sectionTitle}>Today's Schedule</Text>
-            {todaySchedule.length === 0 ? (
-              <View style={styles.emptySchedule}>
-                <Ionicons name="calendar-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
-                <Text style={styles.emptyScheduleText}>No medications scheduled for today</Text>
-              </View>
-            ) : (
-              <ScrollView 
-                ref={scheduleScrollViewRef}
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scheduleScrollContent}
-              >
-                {todaySchedule.map(renderScheduleItem)}
-              </ScrollView>
-            )}
           </View>
 
           {/* Add Medication Button */}

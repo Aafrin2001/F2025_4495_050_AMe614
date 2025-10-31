@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface ScheduleCheckScreenProps {
   onBack: () => void;
@@ -24,8 +25,8 @@ interface ScheduleCheckScreenProps {
 interface ScheduledCheck {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  date?: string;
+  time?: string;
   type: 'doctor' | 'medication' | 'vitals' | 'exercise';
   notes: string;
   completed: boolean;
@@ -38,6 +39,19 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [showDateTimePicker, setShowDateTimePicker] = useState(false);
   const [dateTimePickerTab, setDateTimePickerTab] = useState<'date' | 'time'>('date');
+  
+  // Schedule setup state (shown after check creation)
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [newlyCreatedCheck, setNewlyCreatedCheck] = useState<ScheduledCheck | null>(null);
+  const [scheduleData, setScheduleData] = useState({
+    date: '',
+    time: '',
+  });
+  
+  // Date picker state for schedule modal
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(new Date());
   const [scheduledChecks, setScheduledChecks] = useState<ScheduledCheck[]>([
     {
       id: '1',
@@ -128,8 +142,6 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
     setShowAddForm(false);
     setNewCheck({
       title: '',
-      date: '',
-      time: '',
       type: 'vitals',
       notes: ''
     });
@@ -139,15 +151,25 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
     if (!newCheck.title.trim()) {
       return 'Title is required';
     }
-    if (!newCheck.date) {
-      return 'Date is required';
+    return null;
+  };
+  
+  const validateScheduleData = (): string | null => {
+    const errors: string[] = [];
+    
+    if (!scheduleData.date) {
+      errors.push('Date');
     }
-    if (!newCheck.time) {
-      return 'Time is required';
+    if (!scheduleData.time) {
+      errors.push('Time');
+    }
+    
+    if (errors.length > 0) {
+      return `Please fill in the following required fields: ${errors.join(', ')}`;
     }
     
     // Validate date format and ensure it's not in the past
-    const selectedDateObj = new Date(newCheck.date);
+    const selectedDateObj = new Date(scheduleData.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -161,7 +183,7 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
     
     // Validate time format
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(newCheck.time)) {
+    if (!timeRegex.test(scheduleData.time)) {
       return 'Please select a valid time';
     }
     
@@ -171,24 +193,72 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
   const handleAddCheck = () => {
     const validationError = validateForm();
     if (validationError) {
-      Alert.alert('Validation Error', validationError);
+      Alert.alert('Missing Information', validationError);
       return;
     }
 
+    // Create check without date/time initially
     const check: ScheduledCheck = {
       id: Date.now().toString(),
       title: newCheck.title.trim(),
-      date: newCheck.date,
-      time: newCheck.time,
       type: newCheck.type,
       notes: newCheck.notes.trim(),
       completed: false,
       createdAt: new Date().toISOString(),
     };
 
-    setScheduledChecks([...scheduledChecks, check]);
-    handleCancel();
+    // Show schedule setup modal
+    setNewlyCreatedCheck(check);
+    setScheduleData({
+      date: '',
+      time: '',
+    });
+    setShowAddForm(false);
+    setShowScheduleModal(true);
+  };
+  
+  const handleSaveSchedule = () => {
+    const validationError = validateScheduleData();
+    if (validationError) {
+      Alert.alert('Missing Information', validationError);
+      return;
+    }
+
+    if (!newlyCreatedCheck) return;
+
+    // Update check with date and time
+    const updatedCheck: ScheduledCheck = {
+      ...newlyCreatedCheck,
+      date: scheduleData.date,
+      time: scheduleData.time,
+    };
+
+    setScheduledChecks([...scheduledChecks, updatedCheck]);
+    setShowScheduleModal(false);
+    setNewlyCreatedCheck(null);
+    setScheduleData({ date: '', time: '' });
+    setNewCheck({
+      title: '',
+      type: 'vitals',
+      notes: ''
+    });
     Alert.alert('Success', 'Check scheduled successfully!');
+  };
+  
+  const handleSkipSchedule = () => {
+    if (!newlyCreatedCheck) return;
+
+    // Add check without date/time
+    setScheduledChecks([...scheduledChecks, newlyCreatedCheck]);
+    setShowScheduleModal(false);
+    setNewlyCreatedCheck(null);
+    setScheduleData({ date: '', time: '' });
+    setNewCheck({
+      title: '',
+      type: 'vitals',
+      notes: ''
+    });
+    Alert.alert('Success', 'Check created! You can set date and time later.');
   };
 
   const toggleCompleted = (id: string) => {
@@ -201,32 +271,184 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
     ));
   };
 
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
-    setNewCheck({
-      ...newCheck,
-      date: date.toISOString().split('T')[0]
-    });
-    // Auto-switch to time picker after selecting date
-    setDateTimePickerTab('time');
+  const handleScheduleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      const dateString = selectedDate.toISOString().split('T')[0];
+      setScheduleData({ ...scheduleData, date: dateString });
+      
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+    } else if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
   };
 
-  const handleTimeChange = (time: Date) => {
-    setSelectedTime(time);
-    const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
-    setNewCheck({
-      ...newCheck,
-      time: timeString
-    });
-    // Close picker after selecting time
-    setShowDateTimePicker(false);
-    setDateTimePickerTab('date'); // Reset to date tab for next time
+  const handleScheduleTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    if (selectedTime) {
+      const timeString = selectedTime.toTimeString().split(' ')[0].substring(0, 5);
+      setScheduleData({ ...scheduleData, time: timeString });
+      
+      if (Platform.OS === 'ios') {
+        setShowTimePicker(false);
+      }
+    } else if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
   };
-
-  const openDateTimePicker = () => {
-    // If date is already selected, start with time tab, otherwise date tab
-    setDateTimePickerTab(newCheck.date ? 'time' : 'date');
-    setShowDateTimePicker(true);
+  
+  const renderScheduleDatePicker = () => {
+    let initialDate = new Date();
+    if (scheduleData.date) {
+      initialDate = new Date(scheduleData.date);
+    }
+    
+    if (Platform.OS === 'android') {
+      if (!showDatePicker) return null;
+      return (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="default"
+          onChange={handleScheduleDateChange}
+          minimumDate={new Date()}
+        />
+      );
+    }
+    
+    return (
+      <Modal
+        visible={showDatePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
+          <View style={styles.pickerOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.iosPickerContainer}>
+                <View style={styles.iosPickerHeader}>
+                  <Text style={styles.iosPickerTitle}>Select Date</Text>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <Ionicons name="close" size={24} color="#666666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerWrapper}>
+                  <DateTimePicker
+                    value={tempDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    onChange={(event, date) => {
+                      if (date) {
+                        setTempDate(date);
+                      }
+                    }}
+                    minimumDate={new Date()}
+                    style={styles.datePicker}
+                  />
+                </View>
+                
+                <View style={styles.pickerFooter}>
+                  <TouchableOpacity
+                    style={styles.pickerDoneButton}
+                    onPress={() => {
+                      const dateString = tempDate.toISOString().split('T')[0];
+                      setScheduleData({ ...scheduleData, date: dateString });
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={styles.pickerDoneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+  
+  const renderScheduleTimePicker = () => {
+    let initialTime = new Date();
+    if (scheduleData.time) {
+      const [hours, minutes] = scheduleData.time.split(':');
+      initialTime.setHours(parseInt(hours), parseInt(minutes));
+    }
+    
+    if (Platform.OS === 'android') {
+      if (!showTimePicker) return null;
+      return (
+        <DateTimePicker
+          value={initialTime}
+          mode="time"
+          display="default"
+          onChange={handleScheduleTimeChange}
+          is24Hour={false}
+        />
+      );
+    }
+    
+    return (
+      <Modal
+        visible={showTimePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTimePicker(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowTimePicker(false)}>
+          <View style={styles.pickerOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.iosPickerContainer}>
+                <View style={styles.iosPickerHeader}>
+                  <Text style={styles.iosPickerTitle}>Select Time</Text>
+                  <TouchableOpacity onPress={() => setShowTimePicker(false)}>
+                    <Ionicons name="close" size={24} color="#666666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerWrapper}>
+                  <DateTimePicker
+                    value={initialTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, time) => {
+                      if (time) {
+                        const timeString = time.toTimeString().split(' ')[0].substring(0, 5);
+                        setScheduleData({ ...scheduleData, time: timeString });
+                      }
+                      if (Platform.OS === 'ios') {
+                        setShowTimePicker(false);
+                      }
+                    }}
+                    is24Hour={false}
+                    style={styles.datePicker}
+                  />
+                </View>
+                
+                <View style={styles.pickerFooter}>
+                  <TouchableOpacity
+                    style={styles.pickerDoneButton}
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    <Text style={styles.pickerDoneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
   };
 
   // Combined Date & Time Picker Component with Tabs
@@ -441,9 +663,16 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
           <Text style={[styles.checkTitle, check.completed && styles.completedText]}>
             {check.title}
           </Text>
-          <Text style={styles.checkDateTime}>
-            {formatDate(check.date)} at {check.time}
-          </Text>
+          {check.date && check.time && (
+            <Text style={styles.checkDateTime}>
+              {formatDate(check.date)} at {check.time}
+            </Text>
+          )}
+          {(!check.date || !check.time) && (
+            <Text style={styles.checkDateTime}>
+              Date & time not set
+            </Text>
+          )}
           {check.notes && (
             <Text style={styles.checkNotes}>{check.notes}</Text>
           )}
@@ -458,6 +687,106 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
       </View>
     </TouchableOpacity>
   );
+
+  // If schedule modal should be shown, render full screen schedule view instead
+  if (showScheduleModal) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.scheduleScreenHeader}>
+          <TouchableOpacity onPress={handleSkipSchedule} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Set Check Schedule</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          style={styles.flex1}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scheduleScreenContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.infoBox}>
+              <Ionicons name="calendar-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.infoText}>
+                {newlyCreatedCheck?.title}
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Date *</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  const initialDate = scheduleData.date 
+                    ? new Date(scheduleData.date) 
+                    : new Date();
+                  setTempDate(initialDate);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {scheduleData.date 
+                    ? new Date(scheduleData.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'Select date'
+                  }
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Time *</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  setShowTimePicker(true);
+                }}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {scheduleData.time 
+                    ? scheduleData.time
+                    : 'Select time'
+                  }
+                </Text>
+                <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.scheduleButtons}>
+              <TouchableOpacity
+                style={[styles.scheduleButton, styles.skipButton]}
+                onPress={handleSkipSchedule}
+              >
+                <Text style={styles.skipButtonText}>Skip for Now</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.scheduleButton, styles.saveScheduleButton]}
+                onPress={handleSaveSchedule}
+              >
+                <Text style={styles.saveScheduleButtonText}>Save Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {showDatePicker && renderScheduleDatePicker()}
+        {showTimePicker && renderScheduleTimePicker()}
+      </LinearGradient>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -503,7 +832,15 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
               <Text style={styles.sectionTitle}>Scheduled Checks</Text>
               <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => setShowAddForm(true)}
+                onPress={() => {
+                  // Reset form when opening modal
+                  setNewCheck({
+                    title: '',
+                    type: 'vitals',
+                    notes: ''
+                  });
+                  setShowAddForm(true);
+                }}
               >
                 <Ionicons name="add" size={20} color="#FFFFFF" />
                 <Text style={styles.addButtonText}>Add</Text>
@@ -517,106 +854,381 @@ const ScheduleCheckScreen: React.FC<ScheduleCheckScreenProps> = ({ onBack }) => 
         </ScrollView>
 
         {/* Add Check Modal */}
-        {showAddForm && (
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <View style={styles.modalBackdrop} />
-            </TouchableWithoutFeedback>
-            <View style={[
-              styles.modalContent,
-              isKeyboardVisible && styles.modalContentKeyboardVisible
-            ]}>
-              <View style={styles.modalFormContent}>
-                <Text style={styles.modalTitle}>Schedule New Check</Text>
-                
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Title *</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    value={newCheck.title}
-                    onChangeText={(text) => setNewCheck({...newCheck, title: text})}
-                    placeholder="e.g., Blood Pressure Check"
-                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Type</Text>
-                  <View style={styles.typeButtons}>
-                    {['vitals', 'doctor', 'medication', 'exercise'].map((type) => (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.typeButton,
-                          newCheck.type === type && styles.typeButtonSelected
-                        ]}
-                        onPress={() => setNewCheck({...newCheck, type: type as any})}
-                      >
-                        <Text style={[
-                          styles.typeButtonText,
-                          newCheck.type === type && styles.typeButtonTextSelected
-                        ]}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </Text>
+        <Modal
+          visible={showAddForm}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={handleCancel}
+        >
+          <TouchableWithoutFeedback onPress={handleCancel}>
+            <View style={styles.modalOverlay}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.modalContainer}
+              >
+                <TouchableWithoutFeedback onPress={() => {}}>
+                  <View style={[
+                    styles.modalContent,
+                    isKeyboardVisible && styles.modalContentKeyboardVisible
+                  ]}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Schedule New Check</Text>
+                      <TouchableOpacity onPress={handleCancel}>
+                        <Ionicons name="close" size={24} color="#FFFFFF" />
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Date & Time *</Text>
-                  <TouchableOpacity
-                    style={styles.pickerButton}
-                    onPress={openDateTimePicker}
-                  >
-                    <View style={styles.pickerButtonContent}>
-                      <View>
-                        <Text style={styles.pickerButtonText}>
-                          {newCheck.date || 'Select Date'}
-                        </Text>
-                        <Text style={styles.pickerButtonSubText}>
-                          {newCheck.time || 'Select Time'}
-                        </Text>
-                      </View>
-                      <Ionicons name="calendar-outline" size={24} color="#FFFFFF" />
                     </View>
-                  </TouchableOpacity>
-                </View>
+                    
+                    <ScrollView 
+                      style={styles.modalFormScrollView}
+                      contentContainerStyle={styles.modalFormContent}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Title *</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={newCheck.title}
+                          onChangeText={(text) => setNewCheck({...newCheck, title: text})}
+                          placeholder="e.g., Blood Pressure Check"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
 
-                <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}>Notes (Optional)</Text>
-                  <TextInput
-                    style={[styles.modalInput, styles.notesInput]}
-                    value={newCheck.notes}
-                    onChangeText={(text) => setNewCheck({...newCheck, notes: text})}
-                    placeholder="Add any notes..."
-                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                    multiline
-                    numberOfLines={3}
-                  />
-                </View>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Type</Text>
+                        <View style={styles.typeButtons}>
+                          {['vitals', 'doctor', 'medication', 'exercise'].map((type) => (
+                            <TouchableOpacity
+                              key={type}
+                              style={[
+                                styles.typeButton,
+                                newCheck.type === type && styles.typeButtonSelected
+                              ]}
+                              onPress={() => setNewCheck({...newCheck, type: type as any})}
+                            >
+                              <Text style={[
+                                styles.typeButtonText,
+                                newCheck.type === type && styles.typeButtonTextSelected
+                              ]}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Notes (Optional)</Text>
+                        <TextInput
+                          style={[styles.modalInput, styles.notesInput]}
+                          value={newCheck.notes}
+                          onChangeText={(text) => setNewCheck({...newCheck, notes: text})}
+                          placeholder="Add any notes..."
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                          multiline
+                          numberOfLines={3}
+                        />
+                      </View>
+                    </ScrollView>
+
+                    <View style={[
+                      styles.modalButtons,
+                      isKeyboardVisible && styles.modalButtonsKeyboardVisible
+                    ]}>
+                      <TouchableOpacity
+                        style={styles.modalButton}
+                        onPress={handleCancel}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.saveButton]}
+                        onPress={handleAddCheck}
+                      >
+                        <Text style={styles.saveButtonText}>Schedule</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </KeyboardAvoidingView>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+
+        {/* Combined Date & Time Picker */}
+        {renderDateTimePicker()}
+      </LinearGradient>
+    </KeyboardAvoidingView>
+  );
+
+  // If schedule modal should be shown, render full screen schedule view instead
+  if (showScheduleModal) {
+    return (
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
+        <StatusBar style="light" />
+        
+        <View style={styles.scheduleScreenHeader}>
+          <TouchableOpacity onPress={handleSkipSchedule} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Set Check Schedule</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          style={styles.flex1}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scheduleScreenContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.infoBox}>
+              <Ionicons name="calendar-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.infoText}>
+                {newlyCreatedCheck?.title}
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Date *</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  const initialDate = scheduleData.date 
+                    ? new Date(scheduleData.date) 
+                    : new Date();
+                  setTempDate(initialDate);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {scheduleData.date 
+                    ? new Date(scheduleData.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'Select date'
+                  }
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Time *</Text>
+              <TouchableOpacity 
+                style={styles.datePickerButton}
+                onPress={() => {
+                  setShowTimePicker(true);
+                }}
+              >
+                <Text style={styles.datePickerButtonText}>
+                  {scheduleData.time 
+                    ? scheduleData.time
+                    : 'Select time'
+                  }
+                </Text>
+                <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.scheduleButtons}>
+              <TouchableOpacity
+                style={[styles.scheduleButton, styles.skipButton]}
+                onPress={handleSkipSchedule}
+              >
+                <Text style={styles.skipButtonText}>Skip for Now</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.scheduleButton, styles.saveScheduleButton]}
+                onPress={handleSaveSchedule}
+              >
+                <Text style={styles.saveScheduleButtonText}>Save Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {showDatePicker && renderScheduleDatePicker()}
+        {showTimePicker && renderScheduleTimePicker()}
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.container}
+      >
+        <StatusBar style="light" />
+        
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Schedule Check</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Upcoming Checks</Text>
+            <View style={styles.summaryStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.filter(c => !c.completed).length}</Text>
+                <Text style={styles.statLabel}>Pending</Text>
               </View>
-
-              <View style={[
-                styles.modalButtons,
-                isKeyboardVisible && styles.modalButtonsKeyboardVisible
-              ]}>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={handleCancel}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.saveButton]}
-                  onPress={handleAddCheck}
-                >
-                  <Text style={styles.saveButtonText}>Schedule</Text>
-                </TouchableOpacity>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.filter(c => c.completed).length}</Text>
+                <Text style={styles.statLabel}>Completed</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{scheduledChecks.length}</Text>
+                <Text style={styles.statLabel}>Total</Text>
               </View>
             </View>
           </View>
-        )}
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Scheduled Checks</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => {
+                  // Reset form when opening modal
+                  setNewCheck({
+                    title: '',
+                    type: 'vitals',
+                    notes: ''
+                  });
+                  setShowAddForm(true);
+                }}
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.checksList}>
+              {scheduledChecks.map(renderScheduledCheck)}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Add Check Modal */}
+        <Modal
+          visible={showAddForm}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={handleCancel}
+        >
+          <TouchableWithoutFeedback onPress={handleCancel}>
+            <View style={styles.modalOverlay}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.modalContainer}
+              >
+                <TouchableWithoutFeedback onPress={() => {}}>
+                  <View style={[
+                    styles.modalContent,
+                    isKeyboardVisible && styles.modalContentKeyboardVisible
+                  ]}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Schedule New Check</Text>
+                      <TouchableOpacity onPress={handleCancel}>
+                        <Ionicons name="close" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <ScrollView 
+                      style={styles.modalFormScrollView}
+                      contentContainerStyle={styles.modalFormContent}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Title *</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={newCheck.title}
+                          onChangeText={(text) => setNewCheck({...newCheck, title: text})}
+                          placeholder="e.g., Blood Pressure Check"
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                        />
+                      </View>
+
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Type</Text>
+                        <View style={styles.typeButtons}>
+                          {['vitals', 'doctor', 'medication', 'exercise'].map((type) => (
+                            <TouchableOpacity
+                              key={type}
+                              style={[
+                                styles.typeButton,
+                                newCheck.type === type && styles.typeButtonSelected
+                              ]}
+                              onPress={() => setNewCheck({...newCheck, type: type as any})}
+                            >
+                              <Text style={[
+                                styles.typeButtonText,
+                                newCheck.type === type && styles.typeButtonTextSelected
+                              ]}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Notes (Optional)</Text>
+                        <TextInput
+                          style={[styles.modalInput, styles.notesInput]}
+                          value={newCheck.notes}
+                          onChangeText={(text) => setNewCheck({...newCheck, notes: text})}
+                          placeholder="Add any notes..."
+                          placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                          multiline
+                          numberOfLines={3}
+                        />
+                      </View>
+                    </ScrollView>
+
+                    <View style={[
+                      styles.modalButtons,
+                      isKeyboardVisible && styles.modalButtonsKeyboardVisible
+                    ]}>
+                      <TouchableOpacity
+                        style={styles.modalButton}
+                        onPress={handleCancel}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.saveButton]}
+                        onPress={handleAddCheck}
+                      >
+                        <Text style={styles.saveButtonText}>Schedule</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </KeyboardAvoidingView>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
 
         {/* Combined Date & Time Picker */}
         {renderDateTimePicker()}
@@ -758,45 +1370,44 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  modalContainer: {
+    width: '100%',
   },
   modalContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 25,
+    paddingBottom: 40,
     width: '100%',
-    maxWidth: 350,
-    maxHeight: '80%',
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalContentKeyboardVisible: {
     maxHeight: '75%',
     marginBottom: 10,
     paddingBottom: 20,
   },
+  modalFormScrollView: {
+    flex: 1,
+  },
   modalFormContent: {
-    marginBottom: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   formGroup: {
     marginBottom: 20,
@@ -864,6 +1475,8 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 16,
     color: '#FFFFFF',
+    minHeight: 50,
+    marginTop: 8,
   },
   notesInput: {
     height: 80,
@@ -1028,6 +1641,119 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  scheduleScreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  scheduleScreenContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 25,
+    gap: 12,
+  },
+  infoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 15,
+    marginTop: 8,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  scheduleButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 30,
+    gap: 15,
+  },
+  scheduleButton: {
+    flex: 1,
+    paddingVertical: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+  },
+  skipButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  skipButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveScheduleButton: {
+    backgroundColor: '#4CAF50',
+  },
+  saveScheduleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  flex1: {
+    flex: 1,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  iosPickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 0,
+    maxHeight: '80%',
+  },
+  iosPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  iosPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  datePickerWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    minHeight: 200,
+  },
+  datePicker: {
+    width: '100%',
+    height: Platform.OS === 'ios' ? 200 : 'auto',
+  },
+  pickerFooter: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
 });
 

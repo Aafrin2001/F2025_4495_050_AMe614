@@ -31,31 +31,48 @@ CREATE POLICY "Caregivers can view own relationships" ON caregiver_relationships
 CREATE POLICY "Caregivers can create own requests" ON caregiver_relationships
   FOR INSERT WITH CHECK (auth.uid() = caregiver_id);
 
+-- Helper function to get user email (requires SECURITY DEFINER to access auth.users)
+CREATE OR REPLACE FUNCTION get_user_email()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+DECLARE
+  user_email TEXT;
+BEGIN
+  SELECT email INTO user_email
+  FROM auth.users
+  WHERE id = auth.uid();
+  RETURN user_email;
+END;
+$$;
+
 -- Policy: Seniors can view relationships where they are the senior
+-- Uses helper function to check email match for pending requests
 CREATE POLICY "Seniors can view relationships for them" ON caregiver_relationships
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM auth.users 
-      WHERE auth.users.id = auth.uid() 
-      AND LOWER(auth.users.email) = LOWER(caregiver_relationships.senior_email)
-    )
+    -- Match if senior_id is set and matches current user (after approval)
+    senior_id = auth.uid()
+    OR
+    -- Or if email matches and request is pending (using helper function)
+    (status = 'pending' AND LOWER(get_user_email()) = LOWER(senior_email))
   );
 
 -- Policy: Seniors can approve/reject relationships for them
 CREATE POLICY "Seniors can update relationships for them" ON caregiver_relationships
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM auth.users 
-      WHERE auth.users.id = auth.uid() 
-      AND LOWER(auth.users.email) = LOWER(caregiver_relationships.senior_email)
-    )
+    -- Allow update if senior_id matches (already approved)
+    senior_id = auth.uid()
+    OR
+    -- Or if email matches and status is pending
+    (status = 'pending' AND LOWER(get_user_email()) = LOWER(senior_email))
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM auth.users 
-      WHERE auth.users.id = auth.uid() 
-      AND LOWER(auth.users.email) = LOWER(caregiver_relationships.senior_email)
-    )
+    -- Same condition
+    senior_id = auth.uid()
+    OR
+    (status = 'pending' AND LOWER(get_user_email()) = LOWER(senior_email))
   );
 
 -- Create a function to notify seniors of new caregiver requests

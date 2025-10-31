@@ -81,7 +81,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
 
       // Verify if already approved
       const verifyResult = await CaregiverService.verifyAccess(
-        userData.user.id,
+        user.id,
         seniorEmail.trim()
       );
 
@@ -120,8 +120,12 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
           ]
         );
       }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred while requesting access');
+    } catch (error: any) {
+      console.error('Error requesting caregiver access:', error);
+      Alert.alert(
+        'Error', 
+        error?.message || 'An unexpected error occurred while requesting access. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }

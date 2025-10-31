@@ -6,14 +6,10 @@ export const healthMetricsService = {
   validateMetric: (input: HealthMetricInput): HealthMetricValidation => {
     const { metric_type, systolic, diastolic, value, unit } = input;
 
-    // Check if value is a valid number
-    if (isNaN(value) || value <= 0) {
-      return { isValid: false, error: 'Value must be a positive number' };
-    }
-
     switch (metric_type) {
       case 'blood_pressure':
-        if (!systolic || !diastolic) {
+        // For blood pressure, skip value check and use systolic/diastolic instead
+        if (!systolic || !diastolic || systolic <= 0 || diastolic <= 0) {
           return { isValid: false, error: 'Both systolic and diastolic values are required for blood pressure' };
         }
         if (systolic < 70 || systolic > 250) {
@@ -25,49 +21,67 @@ export const healthMetricsService = {
         if (systolic <= diastolic) {
           return { isValid: false, error: 'Systolic pressure must be higher than diastolic pressure' };
         }
-        break;
+        return { isValid: true };
 
       case 'heart_rate':
+        // Check if value is a valid number
+        if (isNaN(value) || value <= 0) {
+          return { isValid: false, error: 'Value must be a positive number' };
+        }
         if (value < 30 || value > 220) {
           return { isValid: false, error: 'Heart rate should be between 30-220 bpm' };
         }
-        break;
+        return { isValid: true };
 
       case 'body_temperature':
+        // Check if value is a valid number
+        if (isNaN(value) || value <= 0) {
+          return { isValid: false, error: 'Value must be a positive number' };
+        }
         if (unit === '°F' && (value < 90 || value > 110)) {
           return { isValid: false, error: 'Temperature should be between 90-110°F' };
         }
         if (unit === '°C' && (value < 32 || value > 43)) {
           return { isValid: false, error: 'Temperature should be between 32-43°C' };
         }
-        break;
+        return { isValid: true };
 
       case 'weight':
+        // Check if value is a valid number
+        if (isNaN(value) || value <= 0) {
+          return { isValid: false, error: 'Value must be a positive number' };
+        }
         if (unit === 'lbs' && (value < 50 || value > 1000)) {
           return { isValid: false, error: 'Weight should be between 50-1000 lbs' };
         }
         if (unit === 'kg' && (value < 20 || value > 450)) {
           return { isValid: false, error: 'Weight should be between 20-450 kg' };
         }
-        break;
+        return { isValid: true };
 
       case 'blood_sugar':
+        // Check if value is a valid number
+        if (isNaN(value) || value <= 0) {
+          return { isValid: false, error: 'Value must be a positive number' };
+        }
         if (value < 20 || value > 600) {
           return { isValid: false, error: 'Blood sugar should be between 20-600 mg/dL' };
         }
-        break;
+        return { isValid: true };
 
       case 'oxygen_level':
+        // Check if value is a valid number
+        if (isNaN(value) || value <= 0) {
+          return { isValid: false, error: 'Value must be a positive number' };
+        }
         if (value < 70 || value > 100) {
           return { isValid: false, error: 'Oxygen level should be between 70-100%' };
         }
-        break;
+        return { isValid: true };
 
       default:
         return { isValid: false, error: 'Invalid metric type' };
     }
-
-    return { isValid: true };
   },
 
   // Save health metric to database

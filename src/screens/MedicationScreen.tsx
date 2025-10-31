@@ -624,7 +624,8 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
           <TouchableWithoutFeedback onPress={dismissKeyboard}>
             <View style={styles.modalOverlay}>
               <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 style={styles.modalContainer}
               >
                 <TouchableWithoutFeedback onPress={() => {}}>
@@ -641,6 +642,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                     <ScrollView 
                       contentContainerStyle={styles.modalFormContent}
                       showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
                     >
                       {/* Form Errors */}
                       {formErrors.length > 0 && (
@@ -880,24 +882,25 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
                           numberOfLines={3}
                         />
                       </View>
-                    </ScrollView>
 
-                    <View style={styles.modalButtons}>
-                      <TouchableOpacity
-                        style={styles.modalButton}
-                        onPress={() => setShowAddEditModal(false)}
-                      >
-                        <Text style={styles.modalButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.modalButton, styles.saveButton]}
-                        onPress={handleAddMedication}
-                      >
-                        <Text style={styles.saveButtonText}>
-                          {editingMedication ? 'Update' : 'Add'} Medication
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                      {/* Buttons inside ScrollView to ensure accessibility when keyboard is open */}
+                      <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                          style={styles.modalButton}
+                          onPress={() => setShowAddEditModal(false)}
+                        >
+                          <Text style={styles.modalButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.modalButton, styles.saveButton]}
+                          onPress={handleAddMedication}
+                        >
+                          <Text style={styles.saveButtonText}>
+                            {editingMedication ? 'Update' : 'Add'} Medication
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </ScrollView>
                   </View>
                 </TouchableWithoutFeedback>
               </KeyboardAvoidingView>
@@ -1218,7 +1221,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   modalFormContent: {
-    paddingBottom: 10,
+    paddingBottom: 30,
   },
   errorContainer: {
     backgroundColor: 'rgba(255, 0, 0, 0.2)',
@@ -1375,7 +1378,9 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 20,
+    marginBottom: 10,
+    paddingTop: 10,
   },
   modalButton: {
     flex: 1,

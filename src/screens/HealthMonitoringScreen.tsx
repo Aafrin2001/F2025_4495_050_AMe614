@@ -37,6 +37,15 @@ interface VitalSign {
   lastUpdated?: string;
 }
 
+interface VitalGroup {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  vitals: VitalSign[];
+  description: string;
+}
+
 const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({ 
   onBack, 
   onScheduleCheck, 
@@ -100,10 +109,12 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
   ]);
 
   const [selectedVital, setSelectedVital] = useState<VitalSign | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<VitalGroup | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddReading, setShowAddReading] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [currentHealthSummary, setCurrentHealthSummary] = useState<HealthMetricsSummary | null>(null);
+  const [groupReadings, setGroupReadings] = useState<Record<string, HealthMetricInput>>({});
   const [newReading, setNewReading] = useState<HealthMetricInput>({
     metric_type: 'heart_rate',
     value: 0,
@@ -179,6 +190,43 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
         return vital;
       })
     );
+  };
+
+  // Define vital groups
+  const getVitalGroups = (): VitalGroup[] => {
+    const bpVital = vitalSigns.find(v => v.metric_type === 'blood_pressure')!;
+    const hrVital = vitalSigns.find(v => v.metric_type === 'heart_rate')!;
+    const tempVital = vitalSigns.find(v => v.metric_type === 'body_temperature')!;
+    const weightVital = vitalSigns.find(v => v.metric_type === 'weight')!;
+    const bsVital = vitalSigns.find(v => v.metric_type === 'blood_sugar')!;
+    const oxyVital = vitalSigns.find(v => v.metric_type === 'oxygen_level')!;
+
+    return [
+      {
+        id: 'cardiovascular',
+        name: 'Cardiovascular',
+        icon: 'heart',
+        color: '#FF6B6B',
+        description: 'Heart and circulation metrics',
+        vitals: [bpVital, hrVital],
+      },
+      {
+        id: 'metabolic',
+        name: 'Metabolic',
+        icon: 'flame',
+        color: '#FFEAA7',
+        description: 'Weight and blood sugar',
+        vitals: [weightVital, bsVital],
+      },
+      {
+        id: 'general',
+        name: 'General',
+        icon: 'thermometer',
+        color: '#45B7D1',
+        description: 'Body temperature and oxygen level',
+        vitals: [tempVital, oxyVital],
+      },
+    ];
   };
 
   // Health status evaluation functions
@@ -293,6 +341,65 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
     });
   };
 
+  const handleGroupPress = (group: VitalGroup) => {
+    setSelectedGroup(group);
+    // Initialize readings for all vitals in the group
+    const initialReadings: Record<string, HealthMetricInput> = {};
+    group.vitals.forEach(vital => {
+      if (vital.metric_type === 'blood_pressure') {
+        initialReadings[vital.metric_type] = {
+          metric_type: 'blood_pressure',
+          systolic: 0,
+          diastolic: 0,
+          unit: vital.unit,
+          notes: ''
+        };
+      } else {
+        initialReadings[vital.metric_type] = {
+          metric_type: vital.metric_type,
+          value: 0,
+          unit: vital.unit,
+          notes: ''
+        };
+      }
+    });
+    setGroupReadings(initialReadings);
+  };
+
+  const handleCancelGroup = () => {
+    dismissKeyboard();
+    setSelectedGroup(null);
+    setGroupReadings({});
+  };
+
+  const handleSaveGroup = async () => {
+    if (!selectedGroup || !user?.id) return;
+
+    dismissKeyboard();
+    setIsLoading(true);
+    
+    try {
+      const savePromises = Object.entries(groupReadings).map(([metricType, reading]) => {
+        return healthMetricsService.saveMetric(user.id, reading);
+      });
+
+      const results = await Promise.all(savePromises);
+      const errors = results.filter(r => r.error);
+      
+      if (errors.length > 0) {
+        Alert.alert('Error', `Failed to save some readings: ${errors[0].error?.message || 'Unknown error'}`);
+      } else {
+        Alert.alert('Success', `${selectedGroup.name} readings saved successfully!`);
+        handleCancelGroup();
+        loadLatestMetrics();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
@@ -383,6 +490,52 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
         break;
     }
   };
+
+  const renderVitalGroupCard = (group: VitalGroup) => (
+    <TouchableOpacity
+      key={group.id}
+      style={[
+        styles.groupCard, 
+        { borderLeftColor: group.color },
+        selectedGroup?.id === group.id && styles.groupCardSelected
+      ]}
+      onPress={() => handleGroupPress(group)}
+    >
+      <View style={styles.groupHeader}>
+        <Ionicons name={group.icon as any} size={28} color={group.color} />
+        <View style={styles.groupTitleContainer}>
+          <Text style={styles.groupName}>{group.name}</Text>
+          <Text style={styles.groupDescription}>{group.description}</Text>
+        </View>
+      </View>
+      <View style={styles.groupVitalsContainer}>
+        {group.vitals.map((vital, index) => (
+          <View key={vital.id} style={styles.groupVitalItem}>
+            <View style={styles.groupVitalHeader}>
+              <Ionicons name={vital.icon as any} size={16} color={vital.color} />
+              <Text style={styles.groupVitalName}>{vital.name}</Text>
+            </View>
+            <View style={styles.groupVitalValue}>
+              <Text style={styles.groupVitalNumber}>{vital.value}</Text>
+              <Text style={styles.groupVitalUnit}>{vital.unit}</Text>
+            </View>
+            {vital.lastUpdated && (
+              <Text style={styles.groupVitalLastUpdated}>
+                Updated: {vital.lastUpdated}
+              </Text>
+            )}
+            {!vital.lastUpdated && vital.value !== '--' && vital.value !== '--/--' && (
+              <Text style={styles.groupVitalLastUpdated}>
+                No date recorded
+              </Text>
+            )}
+            {index < group.vitals.length - 1 && <View style={styles.groupVitalDivider} />}
+          </View>
+        ))}
+      </View>
+      <Text style={styles.groupTapHint}>Tap to record all {group.name.toLowerCase()} readings</Text>
+    </TouchableOpacity>
+  );
 
   const renderVitalCard = (vital: VitalSign) => (
     <TouchableOpacity
@@ -512,10 +665,10 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vital Signs</Text>
-            <Text style={styles.sectionSubtitle}>Tap any vital to record new reading</Text>
+            <Text style={styles.sectionSubtitle}>Tap a group to record all readings together</Text>
             
-            <View style={styles.vitalsGrid}>
-              {vitalSigns.map(renderVitalCard)}
+            <View style={styles.groupsContainer}>
+              {getVitalGroups().map(renderVitalGroupCard)}
             </View>
           </View>
 
@@ -624,6 +777,182 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
                     <Text style={styles.saveButtonText}>Save</Text>
                   )}
                 </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
+        )}
+
+        {/* Group Input Modal */}
+        {selectedGroup && (
+          <Modal
+            visible={!!selectedGroup}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={handleCancelGroup}
+          >
+            <TouchableWithoutFeedback onPress={dismissKeyboard}>
+              <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                  style={styles.modalContainer}
+                >
+                  <TouchableWithoutFeedback onPress={() => {}}>
+                    <View style={[
+                      styles.modalContent,
+                      isKeyboardVisible && styles.modalContentKeyboardVisible
+                    ]}>
+                      <View style={styles.modalHeader}>
+                        <View style={styles.modalTitleContainer}>
+                          <Text style={styles.modalTitle}>
+                            Record {selectedGroup.name} Readings
+                          </Text>
+                          <Text style={styles.modalSubtitle}>
+                            Fill in all {selectedGroup.vitals.length} reading{selectedGroup.vitals.length > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                        <TouchableOpacity onPress={handleCancelGroup}>
+                          <Ionicons name="close" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                      <ScrollView 
+                        style={styles.modalFormContent} 
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 10 }}
+                      >
+                        {selectedGroup.vitals.map((vital, index) => {
+                          const reading = groupReadings[vital.metric_type];
+                          return (
+                            <View key={vital.id} style={styles.groupInputSection}>
+                              <View style={styles.groupInputHeader}>
+                                <Ionicons name={vital.icon as any} size={20} color={vital.color} />
+                                <Text style={styles.groupInputTitle}>{vital.name}</Text>
+                              </View>
+                              
+                              {vital.metric_type === 'blood_pressure' ? (
+                                <View>
+                                  <View style={styles.formGroup}>
+                                    <Text style={styles.formLabel}>Systolic (Top Number)</Text>
+                                    <TextInput
+                                      style={styles.modalInput}
+                                      value={reading?.systolic?.toString() || ''}
+                                      onChangeText={(text) => setGroupReadings({
+                                        ...groupReadings,
+                                        [vital.metric_type]: {
+                                          ...reading,
+                                          metric_type: 'blood_pressure',
+                                          systolic: parseInt(text) || 0,
+                                          diastolic: reading?.diastolic || 0,
+                                          unit: vital.unit,
+                                          notes: reading?.notes || ''
+                                        }
+                                      })}
+                                      placeholder="120"
+                                      placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                                      keyboardType="numeric"
+                                    />
+                                  </View>
+                                  <View style={styles.formGroup}>
+                                    <Text style={styles.formLabel}>Diastolic (Bottom Number)</Text>
+                                    <TextInput
+                                      style={styles.modalInput}
+                                      value={reading?.diastolic?.toString() || ''}
+                                      onChangeText={(text) => setGroupReadings({
+                                        ...groupReadings,
+                                        [vital.metric_type]: {
+                                          ...reading,
+                                          metric_type: 'blood_pressure',
+                                          systolic: reading?.systolic || 0,
+                                          diastolic: parseInt(text) || 0,
+                                          unit: vital.unit,
+                                          notes: reading?.notes || ''
+                                        }
+                                      })}
+                                      placeholder="80"
+                                      placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                                      keyboardType="numeric"
+                                    />
+                                  </View>
+                                </View>
+                              ) : (
+                                <View style={styles.formGroup}>
+                                  <Text style={styles.formLabel}>{vital.name} ({vital.unit})</Text>
+                                  <TextInput
+                                    style={styles.modalInput}
+                                    value={reading?.value?.toString() || ''}
+                                    onChangeText={(text) => setGroupReadings({
+                                      ...groupReadings,
+                                      [vital.metric_type]: {
+                                        ...reading,
+                                        metric_type: vital.metric_type,
+                                        value: parseFloat(text) || 0,
+                                        unit: vital.unit,
+                                        notes: reading?.notes || ''
+                                      }
+                                    })}
+                                    placeholder={`Enter ${vital.name.toLowerCase()}`}
+                                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                                    keyboardType="decimal-pad"
+                                  />
+                                </View>
+                              )}
+                              
+                              {index < selectedGroup.vitals.length - 1 && (
+                                <View style={styles.groupInputDivider} />
+                              )}
+                            </View>
+                          );
+                        })}
+
+                        <View style={styles.formGroup}>
+                          <Text style={styles.formLabel}>Notes (Optional)</Text>
+                          <TextInput
+                            style={[styles.modalInput, styles.notesInput]}
+                            value={groupReadings[selectedGroup.vitals[0]?.metric_type]?.notes || ''}
+                            onChangeText={(text) => {
+                              // Update notes for all readings in the group
+                              const updatedReadings = { ...groupReadings };
+                              Object.keys(updatedReadings).forEach(key => {
+                                updatedReadings[key] = {
+                                  ...updatedReadings[key],
+                                  notes: text
+                                };
+                              });
+                              setGroupReadings(updatedReadings);
+                            }}
+                            placeholder="Add any notes for all readings..."
+                            placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                            multiline
+                            numberOfLines={3}
+                          />
+                        </View>
+                      </ScrollView>
+
+                      <View style={[
+                        styles.modalButtons,
+                        isKeyboardVisible && styles.modalButtonsKeyboardVisible
+                      ]}>
+                        <TouchableOpacity
+                          style={styles.modalButton}
+                          onPress={handleCancelGroup}
+                          disabled={isLoading}
+                        >
+                          <Text style={styles.modalButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.modalButton, styles.saveButton]}
+                          onPress={handleSaveGroup}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <ActivityIndicator size="small" color="#667eea" />
+                          ) : (
+                            <Text style={styles.saveButtonText}>Save All</Text>
+                          )}
+                        </TouchableOpacity>
                       </View>
                     </View>
                   </TouchableWithoutFeedback>
@@ -813,6 +1142,91 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 20,
   },
+  groupsContainer: {
+    gap: 15,
+  },
+  groupCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 15,
+    padding: 20,
+    borderLeftWidth: 4,
+    marginBottom: 15,
+  },
+  groupCardSelected: {
+    backgroundColor: 'rgba(102, 126, 234, 0.3)',
+    borderWidth: 2,
+    borderColor: '#667eea',
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  groupTitleContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  groupName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  groupDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+  },
+  groupVitalsContainer: {
+    marginTop: 10,
+  },
+  groupVitalItem: {
+    marginVertical: 4,
+  },
+  groupVitalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  groupVitalName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  groupVitalValue: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginLeft: 24,
+  },
+  groupVitalNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  groupVitalUnit: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 8,
+  },
+  groupVitalLastUpdated: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginLeft: 24,
+    marginTop: 4,
+  },
+  groupVitalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 6,
+    marginLeft: 24,
+  },
+  groupTapHint: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontStyle: 'italic',
+    marginTop: 10,
+    textAlign: 'center',
+  },
   vitalsGrid: {
     gap: 15,
   },
@@ -898,28 +1312,60 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 25,
     padding: 20,
     width: '100%',
-    maxHeight: '70%',
+    maxHeight: '85%',
   },
   modalContentKeyboardVisible: {
-    maxHeight: '75%',
+    maxHeight: '90%',
     marginBottom: 10,
     paddingBottom: 20,
   },
   modalFormContent: {
-    marginBottom: 20,
+    marginBottom: 15,
+    paddingBottom: 10,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  modalTitleContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
+  },
+  groupInputSection: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  groupInputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  groupInputTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 10,
+  },
+  groupInputDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 12,
+  },
   modalInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
-    padding: 15,
+    padding: 12,
     fontSize: 18,
     color: '#FFFFFF',
-    marginBottom: 20,
+    marginBottom: 12,
     textAlign: 'center',
   },
   modalButtons: {
@@ -975,7 +1421,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   formGroup: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   formLabel: {
     fontSize: 16,

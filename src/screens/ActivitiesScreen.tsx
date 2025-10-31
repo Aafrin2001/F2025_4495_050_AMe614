@@ -664,7 +664,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: '70%',
   },
-  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',

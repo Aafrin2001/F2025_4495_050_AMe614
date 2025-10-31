@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityService } from '../lib/activityService';
 import { Activity, ActivitySession, ActivityStats } from '../types';
+import { useActivityTracking } from '../contexts/ActivityTrackingContext';
 
 interface Game {
   id: string;
@@ -53,6 +54,9 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   onNavigateToPuzzlePieces,
   onNavigateToNumberSequence,
 }) => {
+  // Activity tracking context
+  const { activeActivity, startActivity: startGlobalActivity, stopActivity: stopGlobalActivity, updateActivity } = useActivityTracking();
+  
   // State management
   const [showAddForm, setShowAddForm] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -60,7 +64,7 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   const [stats, setStats] = useState<ActivityStats | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Current activity session
+  // Current activity session (for local display and sleep quality handling)
   const [currentSession, setCurrentSession] = useState<ActivitySession | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [sessionCalories, setSessionCalories] = useState(0);
@@ -70,6 +74,32 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   const [activityType, setActivityType] = useState<'walk' | 'exercise' | 'stairs_climbing' | 'sleep'>('walk');
   const [notes, setNotes] = useState('');
   const [sleepQuality, setSleepQuality] = useState<'poor' | 'fair' | 'good' | 'excellent'>('good');
+  
+  // Sync local state with global activity context for display
+  useEffect(() => {
+    if (activeActivity && activeActivity.type !== 'walking_tracker') {
+      setSessionDuration(activeActivity.duration);
+      setSessionCalories(activeActivity.caloriesBurned);
+      setSessionDistance(activeActivity.distance);
+      
+      // Update local session for display
+      if (!currentSession || currentSession.id !== activeActivity.id) {
+        setCurrentSession({
+          id: activeActivity.id,
+          type: activeActivity.type,
+          startTime: activeActivity.startTime,
+          duration: activeActivity.duration,
+          caloriesBurned: activeActivity.caloriesBurned,
+          distance: activeActivity.distance,
+          notes: activeActivity.notes,
+          isActive: true,
+        });
+      }
+    } else if (!activeActivity && currentSession) {
+      // Activity was stopped, clear local session
+      resetSession();
+    }
+  }, [activeActivity]);
   
   // Games data
   const [games] = useState<Game[]>([
@@ -107,7 +137,7 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     },
   ]);
   
-  // Timer refs
+  // Timer refs (kept for local display sync, but global context manages actual timer)
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
@@ -132,14 +162,29 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     };
   }, []);
 
-  // Cleanup timer on unmount
+  // Sync local display timer with global context (for UI updates)
   useEffect(() => {
+    if (activeActivity && activeActivity.type !== 'walking_tracker') {
+      timerRef.current = setInterval(() => {
+        if (activeActivity) {
+          setSessionDuration(activeActivity.duration);
+          setSessionCalories(activeActivity.caloriesBurned);
+          setSessionDistance(activeActivity.distance);
+        }
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [activeActivity]);
 
   const loadActivities = async () => {
     try {
@@ -174,6 +219,10 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   };
 
   const startActivity = () => {
+    // Start activity in global context (this will handle the timer globally)
+    startGlobalActivity(activityType, notes);
+    
+    // Keep local session for display and sleep quality handling
     const startTime = new Date();
     const sessionId = `session_${Date.now()}`;
     
@@ -194,51 +243,42 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     setSessionDistance(0);
     startTimeRef.current = startTime;
 
-    // Start timer
-    timerRef.current = setInterval(() => {
-      if (startTimeRef.current) {
-        const now = new Date();
-        const durationSeconds = Math.floor((now.getTime() - startTimeRef.current.getTime()) / 1000);
-        const durationMinutes = durationSeconds / 60;
-        
-        setSessionDuration(durationSeconds);
-        setSessionCalories(ActivityService.calculateCalories(activityType, durationMinutes));
-        setSessionDistance(ActivityService.calculateDistance(activityType, durationMinutes));
-      }
-    }, 1000);
-
     setShowAddForm(false);
     setNotes('');
   };
 
   const stopActivity = async () => {
-    if (!currentSession || !timerRef.current) return;
+    if (!currentSession && !activeActivity) return;
 
-    // Clear timer
-    clearInterval(timerRef.current);
-    timerRef.current = null;
-
-    const endTime = new Date();
-    const durationMinutes = sessionDuration / 60;
+    const activityToStop = activeActivity || {
+      id: currentSession!.id,
+      type: currentSession!.type,
+      startTime: currentSession!.startTime,
+      duration: sessionDuration,
+      caloriesBurned: sessionCalories,
+      distance: sessionDistance,
+      notes: currentSession!.notes,
+    };
 
     try {
       // For sleep activities, ask for sleep quality before saving
-      if (currentSession.type === 'sleep') {
+      if (activityToStop.type === 'sleep') {
         // Show sleep quality selection alert
         Alert.alert(
           'Sleep Quality',
           'How was your sleep quality?',
           [
-            { text: 'Poor', onPress: () => saveSleepActivity('poor') },
-            { text: 'Fair', onPress: () => saveSleepActivity('fair') },
-            { text: 'Good', onPress: () => saveSleepActivity('good') },
-            { text: 'Excellent', onPress: () => saveSleepActivity('excellent') },
+            { text: 'Poor', onPress: () => saveSleepActivity('poor', activityToStop) },
+            { text: 'Fair', onPress: () => saveSleepActivity('fair', activityToStop) },
+            { text: 'Good', onPress: () => saveSleepActivity('good', activityToStop) },
+            { text: 'Excellent', onPress: () => saveSleepActivity('excellent', activityToStop) },
           ],
           { cancelable: false }
         );
       } else {
-        // For non-sleep activities, save directly
-        await saveActivityToDatabase();
+        // For non-sleep activities, save directly then stop global activity
+        await saveActivityToDatabase(activityToStop);
+        await stopGlobalActivity();
       }
     } catch (error) {
       console.error('Error stopping activity:', error);
@@ -246,26 +286,26 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     }
   };
 
-  const saveSleepActivity = async (quality: 'poor' | 'fair' | 'good' | 'excellent') => {
+  const saveSleepActivity = async (quality: 'poor' | 'fair' | 'good' | 'excellent', activity: { id: string; type: string; startTime: Date; duration: number; caloriesBurned: number; distance: number; notes?: string }) => {
     try {
       const endTime = new Date();
       
       // Save sleep activity to Supabase
       const result = await ActivityService.saveActivity({
-        type: currentSession!.type,
-        start_time: currentSession!.startTime.toISOString(),
+        type: activity.type as 'sleep',
+        start_time: activity.startTime.toISOString(),
         end_time: endTime.toISOString(),
-        duration: sessionDuration,
-        calories_burned: sessionCalories,
-        distance: sessionDistance,
-        notes: currentSession!.notes || undefined,
+        duration: activity.duration,
+        calories_burned: activity.caloriesBurned,
+        distance: activity.distance,
+        notes: activity.notes || undefined,
         sleep_quality: quality,
       });
 
       if (result.success) {
         Alert.alert(
           'Sleep Activity Completed!',
-          `Great! You slept for ${ActivityService.formatDuration(sessionDuration)} with ${quality} quality.`,
+          `Great! You slept for ${ActivityService.formatDuration(activity.duration)} with ${quality} quality.`,
           [{ text: 'OK' }]
         );
         
@@ -280,29 +320,39 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
       Alert.alert('Error', 'Failed to save sleep activity');
     }
 
-    // Reset session
+    // Stop global activity and reset session
+    await stopGlobalActivity();
     resetSession();
   };
 
-  const saveActivityToDatabase = async () => {
+  const saveActivityToDatabase = async (activity?: { id: string; type: string; startTime: Date; duration: number; caloriesBurned: number; distance: number; notes?: string }) => {
     try {
       const endTime = new Date();
+      const activityData = activity || {
+        id: currentSession!.id,
+        type: currentSession!.type,
+        startTime: currentSession!.startTime,
+        duration: sessionDuration,
+        caloriesBurned: sessionCalories,
+        distance: sessionDistance,
+        notes: currentSession!.notes,
+      };
       
       // Save activity to Supabase
       const result = await ActivityService.saveActivity({
-        type: currentSession!.type,
-        start_time: currentSession!.startTime.toISOString(),
+        type: activityData.type as 'walk' | 'exercise' | 'stairs_climbing',
+        start_time: activityData.startTime.toISOString(),
         end_time: endTime.toISOString(),
-        duration: sessionDuration,
-        calories_burned: sessionCalories,
-        distance: sessionDistance,
-        notes: currentSession!.notes || undefined,
+        duration: activityData.duration,
+        calories_burned: activityData.caloriesBurned,
+        distance: activityData.distance,
+        notes: activityData.notes || undefined,
       });
 
       if (result.success) {
         Alert.alert(
           'Activity Completed!',
-          `Great job! You burned ${sessionCalories} calories in ${ActivityService.formatDuration(sessionDuration)}.`,
+          `Great job! You burned ${activityData.caloriesBurned} calories in ${ActivityService.formatDuration(activityData.duration)}.`,
           [{ text: 'OK' }]
         );
         
@@ -330,7 +380,12 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
     startTimeRef.current = null;
   };
 
-  const cancelActivity = () => {
+  const cancelActivity = async () => {
+    // Stop global activity if active
+    if (activeActivity) {
+      await stopGlobalActivity();
+    }
+    
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;

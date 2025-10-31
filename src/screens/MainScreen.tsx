@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { useFontSize } from '../contexts/FontSizeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useActivityTracking } from '../contexts/ActivityTrackingContext';
 
 interface MainScreenProps {
   user: User | null;
@@ -36,7 +38,58 @@ const MainScreen: React.FC<MainScreenProps> = ({
 }) => {
   const { getFontSize } = useFontSize();
   const { t } = useLanguage();
+  const { activeActivity, stopActivity } = useActivityTracking();
   const styles = MainScreenStyles(getFontSize);
+
+  const formatActivityTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getActivityName = (type: string) => {
+    switch (type) {
+      case 'walk':
+      case 'walking_tracker':
+        return 'Walking';
+      case 'exercise':
+        return 'Exercising';
+      case 'stairs_climbing':
+        return 'Climbing Stairs';
+      case 'sleep':
+        return 'Sleeping';
+      default:
+        return 'Activity';
+    }
+  };
+
+  const handleStopActivity = async () => {
+    if (!activeActivity) return;
+    
+    // For sleep activities, show a note about saving with quality rating
+    if (activeActivity.type === 'sleep') {
+      Alert.alert(
+        'Stop Sleep Tracking',
+        'This will stop tracking. To save your sleep with quality rating, please go to the Activities screen.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Stop Tracking', 
+            onPress: async () => {
+              await stopActivity();
+            }
+          }
+        ]
+      );
+      return;
+    }
+    
+    await stopActivity();
+  };
   
   // For this demo, we'll show all features
   const showAsEmployer = true;
@@ -85,6 +138,63 @@ const MainScreen: React.FC<MainScreenProps> = ({
       </View>
 
       <ScrollView style={styles.content}>
+        {activeActivity && (
+          <View style={styles.activeActivityCard}>
+            <View style={styles.activeActivityHeader}>
+              <View style={styles.activeActivityInfo}>
+                <Ionicons 
+                  name={activeActivity.type === 'walking_tracker' || activeActivity.type === 'walk' ? 'walk' : activeActivity.type === 'sleep' ? 'moon' : 'fitness'} 
+                  size={24} 
+                  color="#FFFFFF" 
+                />
+                <View style={styles.activeActivityTextContainer}>
+                  <Text style={styles.activeActivityTitle}>
+                    Still {getActivityName(activeActivity.type)}?
+                  </Text>
+                  <Text style={styles.activeActivityDuration}>
+                    {formatActivityTime(activeActivity.duration)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.stopActivityButton}
+                onPress={handleStopActivity}
+              >
+                <Ionicons name="stop" size={20} color="#FFFFFF" />
+                <Text style={styles.stopActivityButtonText}>Stop</Text>
+              </TouchableOpacity>
+            </View>
+            {(activeActivity.caloriesBurned > 0 || activeActivity.distance > 0) && (
+              <View style={styles.activeActivityStats}>
+                {activeActivity.caloriesBurned > 0 && (
+                  <View style={styles.activeActivityStatItem}>
+                    <Text style={styles.activeActivityStatValue}>
+                      {Math.round(activeActivity.caloriesBurned)}
+                    </Text>
+                    <Text style={styles.activeActivityStatLabel}>calories</Text>
+                  </View>
+                )}
+                {activeActivity.distance > 0 && (
+                  <View style={styles.activeActivityStatItem}>
+                    <Text style={styles.activeActivityStatValue}>
+                      {activeActivity.distance.toFixed(2)}
+                    </Text>
+                    <Text style={styles.activeActivityStatLabel}>km</Text>
+                  </View>
+                )}
+                {activeActivity.steps && activeActivity.steps > 0 && (
+                  <View style={styles.activeActivityStatItem}>
+                    <Text style={styles.activeActivityStatValue}>
+                      {activeActivity.steps}
+                    </Text>
+                    <Text style={styles.activeActivityStatLabel}>steps</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+        
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>
             {t('main.welcome')}{user?.firstName ? ` ${user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1)}` : ''}!
@@ -191,6 +301,75 @@ const MainScreenStyles = (getFontSize: (base: number) => number) => StyleSheet.c
   content: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  activeActivityCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  activeActivityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activeActivityInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  activeActivityTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  activeActivityTitle: {
+    fontSize: getFontSize(18),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  activeActivityDuration: {
+    fontSize: getFontSize(16),
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+  },
+  stopActivityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  stopActivityButtonText: {
+    color: '#FFFFFF',
+    fontSize: getFontSize(14),
+    fontWeight: '600',
+  },
+  activeActivityStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  activeActivityStatItem: {
+    alignItems: 'center',
+  },
+  activeActivityStatValue: {
+    fontSize: getFontSize(18),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  activeActivityStatLabel: {
+    fontSize: getFontSize(12),
+    color: 'rgba(255, 255, 255, 0.8)',
+    textTransform: 'uppercase',
   },
   welcomeCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',

@@ -4,6 +4,7 @@ import { User } from './src/types';
 import { auth } from './src/lib/supabase';
 import { FontSizeProvider } from './src/contexts/FontSizeContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
+import { ActivityTrackingProvider } from './src/contexts/ActivityTrackingContext';
 import SplashScreen from './src/screens/SplashScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import AuthScreen from './src/screens/AuthScreen';
@@ -288,8 +289,10 @@ export default function App() {
   return (
     <LanguageProvider>
       <FontSizeProvider>
-        <StatusBar style="auto" />
-        {renderScreen()}
+        <ActivityTrackingProvider>
+          <StatusBar style="auto" />
+          {renderScreen()}
+        </ActivityTrackingProvider>
       </FontSizeProvider>
     </LanguageProvider>
   );

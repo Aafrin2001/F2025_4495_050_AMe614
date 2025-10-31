@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useActivityTracking } from '../contexts/ActivityTrackingContext';
 
 interface WalkingTrackerScreenProps {
   onBack: () => void;
@@ -25,11 +26,26 @@ interface WalkingData {
 }
 
 const WalkingTrackerScreen: React.FC<WalkingTrackerScreenProps> = ({ onBack, onComplete }) => {
+  const { activeActivity, startActivity, stopActivity, updateActivity } = useActivityTracking();
   const [isWalking, setIsWalking] = useState(false);
   const [walkingDuration, setWalkingDuration] = useState(0);
   const [steps, setSteps] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const pulseAnim = new Animated.Value(1);
+
+  // Sync with global activity context
+  useEffect(() => {
+    if (activeActivity && activeActivity.type === 'walking_tracker') {
+      setIsWalking(true);
+      // Sync duration and steps from context (context is source of truth)
+      setWalkingDuration(activeActivity.duration);
+      if (activeActivity.steps !== undefined) {
+        setSteps(activeActivity.steps);
+      }
+    } else if (!activeActivity && isWalking) {
+      setIsWalking(false);
+    }
+  }, [activeActivity]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -54,8 +70,18 @@ const WalkingTrackerScreen: React.FC<WalkingTrackerScreenProps> = ({ onBack, onC
 
       // Update timer and steps
       interval = setInterval(() => {
+        const newSteps = Math.floor(Math.random() * 3) + 1;
         setWalkingDuration((prev) => prev + 1);
-        setSteps((prev) => prev + Math.floor(Math.random() * 3) + 1); // Simulate steps
+        setSteps((prev) => {
+          const newStepsValue = prev + newSteps;
+          // Update global activity with new steps (duration is handled by context timer)
+          if (activeActivity && activeActivity.type === 'walking_tracker') {
+            updateActivity({
+              steps: newStepsValue,
+            });
+          }
+          return newStepsValue;
+        });
       }, 1000);
     } else {
       pulseAnim.stopAnimation();
@@ -70,12 +96,15 @@ const WalkingTrackerScreen: React.FC<WalkingTrackerScreenProps> = ({ onBack, onC
 
   const startWalking = () => {
     setIsWalking(true);
-    setStartTime(new Date());
+    const now = new Date();
+    setStartTime(now);
     setWalkingDuration(0);
     setSteps(0);
+    // Start activity in global context
+    startActivity('walking_tracker', undefined, 0);
   };
 
-  const stopWalking = () => {
+  const stopWalking = async () => {
     setIsWalking(false);
     const distance = steps * 0.0005; // Approximate miles per step
     const calories = Math.round(steps * 0.04); // Approximate calories per step
@@ -87,6 +116,9 @@ const WalkingTrackerScreen: React.FC<WalkingTrackerScreenProps> = ({ onBack, onC
       calories: calories,
       completed: true,
     };
+
+    // Stop global activity tracking
+    await stopActivity();
 
     Alert.alert(
       'Walk Complete!',

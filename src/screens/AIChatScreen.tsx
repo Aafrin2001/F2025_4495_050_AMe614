@@ -8,10 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sendChatMessage, ChatMessage } from '../lib/chatGPTService';
 
 interface AIChatScreenProps {
   onBack: () => void;
@@ -24,18 +27,95 @@ interface Message {
   timestamp: Date;
 }
 
+interface SerializedMessage {
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: string;
+}
+
+const CHAT_HISTORY_KEY = '@ai_chat_history';
+
 const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: "Hello! I'm your AI health companion. I'm here to help you with health monitoring, medication reminders, and answer any health-related questions you might have. How can I assist you today?",
-      isUser: false,
-      timestamp: new Date(),
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Load conversation history from storage on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const storedHistory = await AsyncStorage.getItem(CHAT_HISTORY_KEY);
+        if (storedHistory) {
+          const parsedMessages: SerializedMessage[] = JSON.parse(storedHistory);
+          const restoredMessages: Message[] = parsedMessages.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(restoredMessages);
+        } else {
+          // If no history, start with welcome message
+          setMessages([
+            {
+              id: '1',
+              text: "Hello! I'm your AI health companion. I'm here to help you with health monitoring, medication reminders, and answer any health-related questions you might have. How can I assist you today?",
+              isUser: false,
+              timestamp: new Date(),
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        // If error loading, start with welcome message
+        setMessages([
+          {
+            id: '1',
+            text: "Hello! I'm your AI health companion. I'm here to help you with health monitoring, medication reminders, and answer any health-related questions you might have. How can I assist you today?",
+            isUser: false,
+            timestamp: new Date(),
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, []);
+
+  // Save conversation history to storage whenever messages change
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      const saveHistory = async () => {
+        try {
+          const serializedMessages: SerializedMessage[] = messages.map(msg => ({
+            ...msg,
+            timestamp: msg.timestamp.toISOString(),
+          }));
+          await AsyncStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(serializedMessages));
+        } catch (error) {
+          console.error('Error saving chat history:', error);
+        }
+      };
+
+      saveHistory();
+    }
+  }, [messages, isLoading]);
+  
+  // Convert messages to ChatGPT format
+  const getConversationHistory = (): ChatMessage[] => {
+    return messages
+      .filter(msg => {
+        // Exclude the initial greeting (id === '1' or text contains welcome message)
+        return msg.id !== '1' && !msg.text.includes("Hello! I'm your AI health companion");
+      })
+      .map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.text,
+      }));
+  };
 
   const quickActions = [
     { id: '1', text: 'Check my vitals', icon: 'heart-outline' },
@@ -53,7 +133,7 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack }) => {
     }, 100);
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
     const userMessage: Message = {
@@ -63,24 +143,49 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack }) => {
       timestamp: new Date(),
     };
 
+    const messageText = inputText.trim();
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsTyping(true);
 
-    // Simulate AI response after a delay
-    setTimeout(() => {
+    try {
+      // Get conversation history
+      const conversationHistory = getConversationHistory();
+      
+      // Send to ChatGPT
+      const aiResponseText = await sendChatMessage(messageText, conversationHistory);
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I understand your question. For now, this is a demo interface. In the full version, I would provide personalized health advice, medication reminders, and connect you with healthcare providers. How else can I help you today?",
+        text: aiResponseText,
         isUser: false,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
       setIsTyping(false);
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      setIsTyping(false);
+      
+      // Show error message to user
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: error.message || 'Sorry, I encountered an error. Please check your OpenAI API key configuration and try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // Also show alert
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to send message. Please check your OpenAI API key configuration.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleQuickAction = async (action: string) => {
     const quickMessage: Message = {
       id: Date.now().toString(),
       text: action,
@@ -91,17 +196,34 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack }) => {
     setMessages(prev => [...prev, quickMessage]);
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Get conversation history
+      const conversationHistory = getConversationHistory();
+      
+      // Send to ChatGPT
+      const aiResponseText = await sendChatMessage(action, conversationHistory);
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: `I'd be happy to help you with ${action.toLowerCase()}. This feature will be fully functional in the complete version of the app. Is there anything specific you'd like to know about this?`,
+        text: aiResponseText,
         isUser: false,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
       setIsTyping(false);
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error sending quick action:', error);
+      setIsTyping(false);
+      
+      // Show error message to user
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: error.message || 'Sorry, I encountered an error. Please check your OpenAI API key configuration and try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   const renderMessage = (message: Message) => (
@@ -180,59 +302,69 @@ const AIChatScreen: React.FC<AIChatScreenProps> = ({ onBack }) => {
         style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {messages.map(renderMessage)}
-          {isTyping && renderTypingIndicator()}
-        </ScrollView>
-
-        <View style={styles.quickActionsContainer}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading conversation...</Text>
+          </View>
+        ) : (
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.quickActionsScroll}
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            showsVerticalScrollIndicator={false}
           >
-            {quickActions.map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={styles.quickActionButton}
-                onPress={() => handleQuickAction(action.text)}
-              >
-                <Ionicons name={action.icon as any} size={20} color="#667eea" />
-                <Text style={styles.quickActionText}>{action.text}</Text>
-              </TouchableOpacity>
-            ))}
+            {messages.map(renderMessage)}
+            {isTyping && renderTypingIndicator()}
           </ScrollView>
-        </View>
+        )}
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Type your message..."
-            placeholderTextColor="rgba(102, 126, 234, 0.6)"
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              !inputText.trim() && styles.sendButtonDisabled,
-            ]}
-            onPress={handleSendMessage}
-            disabled={!inputText.trim()}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={inputText.trim() ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)'}
-            />
-          </TouchableOpacity>
-        </View>
+        {!isLoading && (
+          <>
+            <View style={styles.quickActionsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.quickActionsScroll}
+              >
+                {quickActions.map((action) => (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={styles.quickActionButton}
+                    onPress={() => handleQuickAction(action.text)}
+                  >
+                    <Ionicons name={action.icon as any} size={20} color="#667eea" />
+                    <Text style={styles.quickActionText}>{action.text}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Type your message..."
+                placeholderTextColor="rgba(102, 126, 234, 0.6)"
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
+                ]}
+                onPress={handleSendMessage}
+                disabled={!inputText.trim() || isTyping}
+              >
+                <Ionicons
+                  name="send"
+                  size={20}
+                  color={inputText.trim() && !isTyping ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)'}
+                />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -276,6 +408,16 @@ const styles = StyleSheet.create({
   messagesContainer: {
     flex: 1,
     paddingVertical: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
   },
   messageContainer: {
     marginVertical: 4,

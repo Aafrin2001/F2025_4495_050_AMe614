@@ -118,7 +118,11 @@ const MainScreen: React.FC<MainScreenProps> = ({
               )}
             </View>
 
-            <View style={styles.ctaCard}>
+            <TouchableOpacity 
+              style={styles.ctaCard} 
+              onPress={onFindServices}
+              activeOpacity={0.8}
+            >
               <Text style={styles.ctaTitle}>Chat with AI</Text>
               <Text style={styles.ctaDescription}>
                 {showAsEmployer && showAsProvider 
@@ -129,16 +133,16 @@ const MainScreen: React.FC<MainScreenProps> = ({
                 }
               </Text>
           {showAsEmployer && (
-            <TouchableOpacity style={styles.ctaButton} onPress={onFindServices}>
+            <View style={styles.ctaButton}>
                   <Text style={styles.ctaButtonText}>Chat with AI</Text>
-            </TouchableOpacity>
+            </View>
           )}
           {showAsProvider && !showAsEmployer && (
-            <TouchableOpacity style={styles.ctaButton} onPress={onOfferSkills}>
+            <View style={styles.ctaButton}>
               <Text style={styles.ctaButtonText}>Emergency Support</Text>
-            </TouchableOpacity>
+            </View>
           )}
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );

@@ -7,10 +7,12 @@ import {
   ScrollView,
   Animated,
   Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { sendChatMessage, speakText, stopSpeaking, ChatMessage } from '../lib/chatGPTService';
 
 interface VoiceChatScreenProps {
   onBack: () => void;
@@ -38,6 +40,105 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+  const recognitionRef = useRef<any>(null);
+  
+  // Convert messages to ChatGPT format
+  const getConversationHistory = (): ChatMessage[] => {
+    return messages
+      .filter(msg => msg.id !== '1') // Exclude the initial greeting
+      .map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
+        content: msg.text,
+      }));
+  };
+  
+  const handleVoiceInput = async (transcript: string) => {
+    if (!transcript.trim()) return;
+    
+    setIsListening(false);
+    setIsProcessing(true);
+    
+    const userMessage: VoiceMessage = {
+      id: Date.now().toString(),
+      text: transcript,
+      isUser: true,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    
+    try {
+      // Get conversation history
+      const conversationHistory = getConversationHistory();
+      
+      // Send to ChatGPT
+      const aiResponseText = await sendChatMessage(transcript, conversationHistory);
+      
+      const aiResponse: VoiceMessage = {
+        id: (Date.now() + 1).toString(),
+        text: aiResponseText,
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, aiResponse]);
+      setIsProcessing(false);
+      setIsSpeaking(true);
+      
+      // Convert AI response to speech
+      await speakText(aiResponseText);
+      setIsSpeaking(false);
+    } catch (error: any) {
+      console.error('Error processing voice input:', error);
+      setIsProcessing(false);
+      
+      const errorMessage: VoiceMessage = {
+        id: (Date.now() + 1).toString(),
+        text: error.message || 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
+      Alert.alert('Error', error.message || 'Failed to process voice input. Please check your OpenAI API key configuration.');
+    }
+  };
+  
+  // Initialize Web Speech API for speech recognition (web only)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+        
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          handleVoiceInput(transcript);
+        };
+        
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          Alert.alert('Error', 'Speech recognition failed. Please try again.');
+        };
+        
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+    
+    return () => {
+      stopSpeaking();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const quickActions = [
     { id: '1', text: 'Check my vitals', icon: 'heart-outline' },
@@ -76,52 +177,46 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
   }, [isListening]);
 
   const handleStartListening = () => {
-    setIsListening(true);
-    // Simulate listening for 3 seconds
-    setTimeout(() => {
-      setIsListening(false);
-      setIsProcessing(true);
-      
-      // Simulate processing
-      setTimeout(() => {
-        setIsProcessing(false);
-        setIsSpeaking(true);
-        
-        const userMessage: VoiceMessage = {
-          id: Date.now().toString(),
-          text: "I need help with my blood pressure reading",
-          isUser: true,
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, userMessage]);
-        
-        // Simulate AI response
-        setTimeout(() => {
-          const aiResponse: VoiceMessage = {
-            id: (Date.now() + 1).toString(),
-            text: "I understand you need help with your blood pressure reading. I can help you track your readings and provide guidance. Would you like me to show you how to record a new reading?",
-            isUser: false,
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, aiResponse]);
-          setIsSpeaking(false);
-        }, 2000);
-      }, 1500);
-    }, 3000);
+    if (isProcessing || isSpeaking) return;
+    
+    // Use Web Speech API on web
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && recognitionRef.current) {
+      try {
+        setIsListening(true);
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setIsListening(false);
+        Alert.alert('Error', 'Failed to start speech recognition. Please try again.');
+      }
+    } else {
+      // For native platforms, show a message about manual input
+      Alert.alert(
+        'Speech Recognition',
+        'Speech recognition is available on web browsers. On mobile devices, you can use the quick action buttons or type your message manually in the text chat.',
+        [
+          {
+            text: 'Use Text Chat',
+            onPress: () => {
+              // This could navigate to text chat if needed
+            },
+          },
+          { text: 'OK' },
+        ]
+      );
+    }
   };
 
   const handleStopListening = () => {
+    if (Platform.OS === 'web' && recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
     setIsListening(false);
-    setIsProcessing(true);
-    
-    setTimeout(() => {
-      setIsProcessing(false);
-      Alert.alert('Voice Input', 'Voice recognition stopped. Tap the microphone to try again.');
-    }, 1000);
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleQuickAction = async (action: string) => {
+    if (isProcessing || isSpeaking) return;
+    
     const quickMessage: VoiceMessage = {
       id: Date.now().toString(),
       text: action,
@@ -130,18 +225,41 @@ const VoiceChatScreen: React.FC<VoiceChatScreenProps> = ({ onBack }) => {
     };
 
     setMessages(prev => [...prev, quickMessage]);
-    setIsSpeaking(true);
+    setIsProcessing(true);
 
-    setTimeout(() => {
+    try {
+      // Get conversation history
+      const conversationHistory = getConversationHistory();
+      
+      // Send to ChatGPT
+      const aiResponseText = await sendChatMessage(action, conversationHistory);
+      
       const aiResponse: VoiceMessage = {
         id: (Date.now() + 1).toString(),
-        text: `I'd be happy to help you with ${action.toLowerCase()}. This feature will be fully functional in the complete version of the app. Is there anything specific you'd like to know about this?`,
+        text: aiResponseText,
         isUser: false,
         timestamp: new Date(),
       };
+      
       setMessages(prev => [...prev, aiResponse]);
+      setIsProcessing(false);
+      setIsSpeaking(true);
+      
+      // Convert AI response to speech
+      await speakText(aiResponseText);
       setIsSpeaking(false);
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error processing quick action:', error);
+      setIsProcessing(false);
+      
+      const errorMessage: VoiceMessage = {
+        id: (Date.now() + 1).toString(),
+        text: error.message || 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   const renderMessage = (message: VoiceMessage) => (

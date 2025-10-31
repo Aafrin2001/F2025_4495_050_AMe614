@@ -40,6 +40,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
   const [showMedicationAlerts, setShowMedicationAlerts] = useState(false);
   const [showEmergencyAlerts, setShowEmergencyAlerts] = useState(false);
   const [showInactivityAlerts, setShowInactivityAlerts] = useState(false);
+  const [selectedAlertDetails, setSelectedAlertDetails] = useState<EmergencyAlert | null>(null);
   
   // Auto-refresh timer
   const refreshTimer = useRef<NodeJS.Timeout | null>(null);
@@ -220,7 +221,12 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
   );
 
   const renderEmergencyAlertCard = (alert: EmergencyAlert) => (
-    <View key={alert.id} style={[styles.emergencyCard, { borderLeftColor: getSeverityColor(alert.severity) }]}>
+    <TouchableOpacity 
+      key={alert.id} 
+      style={[styles.emergencyCard, { borderLeftColor: getSeverityColor(alert.severity) }]}
+      onPress={() => setSelectedAlertDetails(alert)}
+      activeOpacity={0.7}
+    >
       <View style={styles.alertHeader}>
         <Ionicons 
           name={alert.type === 'Health' ? 'heart' : alert.type === 'Medication' ? 'medical' : 'warning'} 
@@ -239,8 +245,194 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           <Text style={styles.resolvedText}>RESOLVED</Text>
         </View>
       )}
-    </View>
+      <View style={styles.tapIndicator}>
+        <Text style={styles.tapIndicatorText}>Tap for details →</Text>
+      </View>
+    </TouchableOpacity>
   );
+
+  const renderAlertDetails = () => {
+    if (!selectedAlertDetails) return null;
+
+    const alert = selectedAlertDetails;
+    const details = alert.details;
+
+    // Format health metric details
+    const getHealthMetricDetails = () => {
+      if (!details || alert.type !== 'Health') return null;
+
+      switch (details.metric_type) {
+        case 'blood_pressure':
+          return {
+            title: 'Blood Pressure Reading',
+            values: [
+              { label: 'Systolic', value: `${details.systolic} mmHg`, color: '#F44336' },
+              { label: 'Diastolic', value: `${details.diastolic} mmHg`, color: '#F44336' },
+              { label: 'Normal Range', value: '90-120 / 60-80 mmHg', color: '#4CAF50' },
+              { label: 'Status', value: details.systolic > 180 || details.diastolic > 110 ? 'Critical - Seek immediate medical attention' : 'High - Monitor closely', color: '#F44336' },
+            ],
+            recommendations: [
+              'Seek immediate medical attention if reading is consistently high',
+              'Monitor blood pressure regularly',
+              'Follow up with healthcare provider',
+              'Consider lifestyle changes: reduce sodium, exercise regularly',
+            ],
+          };
+        case 'heart_rate':
+          return {
+            title: 'Heart Rate Reading',
+            values: [
+              { label: 'Heart Rate', value: `${details.value} bpm`, color: '#F44336' },
+              { label: 'Normal Range', value: '60-100 bpm', color: '#4CAF50' },
+              { label: 'Status', value: details.value > 120 || details.value < 40 ? 'Critical - Seek immediate medical attention' : 'Abnormal - Monitor closely', color: '#F44336' },
+            ],
+            recommendations: [
+              'Seek immediate medical attention for critical readings',
+              'Avoid strenuous activity if heart rate is very high',
+              'Monitor heart rate throughout the day',
+              'Consult with healthcare provider',
+            ],
+          };
+        case 'body_temperature':
+          return {
+            title: 'Body Temperature Reading',
+            values: [
+              { label: 'Temperature', value: `${details.value}°F`, color: '#F44336' },
+              { label: 'Normal Range', value: '97-99°F', color: '#4CAF50' },
+              { label: 'Status', value: details.value > 103 || details.value < 95 ? 'Critical - Seek immediate medical attention' : 'Abnormal - Monitor closely', color: '#F44336' },
+            ],
+            recommendations: [
+              'Seek immediate medical attention for critical temperatures',
+              'Stay hydrated',
+              'Rest and monitor temperature regularly',
+              'Contact healthcare provider if temperature persists',
+            ],
+          };
+        case 'oxygen_level':
+          return {
+            title: 'Oxygen Level Reading',
+            values: [
+              { label: 'Oxygen Saturation', value: `${details.value}%`, color: '#F44336' },
+              { label: 'Normal Range', value: '95-100%', color: '#4CAF50' },
+              { label: 'Status', value: 'Critical - Low oxygen levels require immediate medical attention', color: '#F44336' },
+            ],
+            recommendations: [
+              'Seek immediate emergency medical attention',
+              'Sit upright and try to breathe slowly',
+              'Do not ignore low oxygen levels',
+              'Contact emergency services if below 90%',
+            ],
+          };
+        default:
+          return null;
+      }
+    };
+
+    const healthDetails = getHealthMetricDetails();
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={selectedAlertDetails !== null}
+        onRequestClose={() => setSelectedAlertDetails(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.detailsModalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.detailsHeaderRow}>
+                <Ionicons 
+                  name={alert.type === 'Health' ? 'heart' : alert.type === 'Medication' ? 'medical' : 'warning'} 
+                  size={28} 
+                  color={getSeverityColor(alert.severity)} 
+                />
+                <View style={styles.detailsTitleContainer}>
+                  <Text style={styles.detailsTitle}>Critical Health Alert</Text>
+                  <Text style={[styles.detailsSeverity, { color: getSeverityColor(alert.severity) }]}>
+                    {alert.severity.toUpperCase()} SEVERITY
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedAlertDetails(null)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.detailsContent}>
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsSectionTitle}>Alert Information</Text>
+                <View style={styles.detailsInfoRow}>
+                  <Text style={styles.detailsLabel}>Patient:</Text>
+                  <Text style={styles.detailsValue}>{alert.userName}</Text>
+                </View>
+                <View style={styles.detailsInfoRow}>
+                  <Text style={styles.detailsLabel}>Alert Type:</Text>
+                  <Text style={styles.detailsValue}>{alert.type}</Text>
+                </View>
+                <View style={styles.detailsInfoRow}>
+                  <Text style={styles.detailsLabel}>Message:</Text>
+                  <Text style={[styles.detailsValue, styles.alertMessageText]}>{alert.message}</Text>
+                </View>
+                <View style={styles.detailsInfoRow}>
+                  <Text style={styles.detailsLabel}>Date & Time:</Text>
+                  <Text style={styles.detailsValue}>
+                    {formatDate(alert.timestamp)} at {formatTime(alert.timestamp)}
+                  </Text>
+                </View>
+              </View>
+
+              {healthDetails && (
+                <>
+                  <View style={styles.detailsSection}>
+                    <Text style={styles.detailsSectionTitle}>{healthDetails.title}</Text>
+                    {healthDetails.values.map((item, index) => (
+                      <View key={index} style={styles.detailsInfoRow}>
+                        <Text style={styles.detailsLabel}>{item.label}:</Text>
+                        <Text style={[styles.detailsValue, { color: item.color }]}>{item.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={styles.detailsSection}>
+                    <Text style={styles.detailsSectionTitle}>Recommendations</Text>
+                    {healthDetails.recommendations.map((rec, index) => (
+                      <View key={index} style={styles.recommendationItem}>
+                        <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                        <Text style={styles.recommendationText}>{rec}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {details?.notes && (
+                <View style={styles.detailsSection}>
+                  <Text style={styles.detailsSectionTitle}>Additional Notes</Text>
+                  <Text style={styles.notesText}>{details.notes}</Text>
+                </View>
+              )}
+
+              {alert.isResolved && (
+                <View style={styles.resolvedSection}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Text style={styles.resolvedSectionText}>This alert has been resolved</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.detailsFooter}>
+              <TouchableOpacity
+                style={styles.closeDetailsButton}
+                onPress={() => setSelectedAlertDetails(null)}
+              >
+                <Text style={styles.closeDetailsButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const renderInactivityAlertCard = (alert: InactivityAlert) => (
     <View key={alert.id} style={[styles.inactivityCard, { borderLeftColor: getAlertLevelColor(alert.alertLevel) }]}>
@@ -568,6 +760,9 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack }) =
           </View>
         </View>
       </Modal>
+
+      {/* Alert Details Modal */}
+      {renderAlertDetails()}
     </LinearGradient>
   );
 };
@@ -892,6 +1087,132 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  tapIndicator: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'flex-end',
+  },
+  tapIndicatorText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  detailsModalContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    width: '100%',
+    maxHeight: '90%',
+  },
+  detailsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  detailsTitleContainer: {
+    marginLeft: 15,
+    flex: 1,
+  },
+  detailsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  detailsSeverity: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  detailsContent: {
+    maxHeight: '70%',
+  },
+  detailsSection: {
+    marginBottom: 25,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  detailsSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 15,
+  },
+  detailsInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  detailsLabel: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    flex: 1,
+  },
+  detailsValue: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+  alertMessageText: {
+    color: '#FF6B6B',
+    fontWeight: '500',
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    paddingLeft: 5,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
+  notesText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  resolvedSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 20,
+  },
+  resolvedSectionText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  detailsFooter: {
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  closeDetailsButton: {
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+  },
+  closeDetailsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -1,0 +1,405 @@
+.medication-container {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.medication-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20px;
+  padding-top: 50px;
+  padding-bottom: 15px;
+}
+
+.medication-back-button {
+  margin-right: 10px;
+  padding: 5px;
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+}
+
+.medication-header-title {
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.medication-content {
+  flex: 1;
+  padding: 10px 20px 20px;
+  overflow-y: auto;
+}
+
+.medication-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #FFFFFF;
+}
+
+.medication-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+.medication-section-title {
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 15px;
+}
+
+.medication-stats-container {
+  margin-bottom: 20px;
+}
+
+.medication-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.medication-stat-card {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+.medication-stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #FFFFFF;
+  margin-bottom: 5px;
+}
+
+.medication-stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.medication-add-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #4CAF50;
+  border-radius: 15px;
+  padding: 15px;
+  border: none;
+  color: #FFFFFF;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.medication-medications-container {
+  margin-bottom: 20px;
+}
+
+.medication-card {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 4px solid #4CAF50;
+}
+
+.medication-card-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.medication-card-info {
+  flex: 1;
+}
+
+.medication-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 5px;
+}
+
+.medication-dosage {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 2px;
+}
+
+.medication-frequency {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.medication-card-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+}
+
+.medication-edit-button,
+.medication-delete-button {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.medication-times {
+  margin-top: 10px;
+}
+
+.medication-times-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 5px;
+}
+
+.medication-times-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.medication-time-chip {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  color: #FFFFFF;
+}
+
+.medication-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.medication-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.medication-modal-content,
+.medication-picker-content {
+  background-color: rgba(0, 0, 0, 0.9);
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
+  padding: 20px;
+  width: 100%;
+  max-height: 70%;
+  overflow-y: auto;
+}
+
+.medication-modal-header,
+.medication-picker-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.medication-modal-title,
+.medication-picker-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.medication-modal-close {
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.medication-modal-form-content {
+  padding-bottom: 10px;
+}
+
+.medication-error-container {
+  background-color: rgba(255, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.medication-error-text {
+  color: #FF6B6B;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.medication-form-group {
+  margin-bottom: 20px;
+}
+
+.medication-form-group label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+}
+
+.medication-modal-input {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 16px;
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-sizing: border-box;
+}
+
+.medication-modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.medication-times-input-container {
+  margin-bottom: 15px;
+}
+
+.medication-time-input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.medication-time-input-button {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 15px;
+  border: none;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.medication-remove-time-button {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.medication-add-time-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: rgba(76, 175, 80, 0.3);
+  border-radius: 12px;
+  padding: 10px 15px;
+  border: none;
+  color: #4CAF50;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.medication-modal-buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.medication-modal-button {
+  flex: 1;
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.medication-modal-cancel {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+.medication-modal-save {
+  background-color: #FFFFFF;
+  color: #667eea;
+}
+
+.medication-picker-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.medication-picker-option {
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.medication-picker-option:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+

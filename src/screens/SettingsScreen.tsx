@@ -12,6 +12,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useFontSize, FontSizeScale } from '../contexts/FontSizeContext';
+import { useLanguage, Language } from '../contexts/LanguageContext';
+import { Platform, KeyboardAvoidingView, TouchableWithoutFeedback } from 'react-native';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -27,7 +30,10 @@ interface SettingItem {
   onPress?: () => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
+const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
+  const { fontSizeScale, setFontSizeScale, getFontSize } = useFontSize();
+  const { language, setLanguage, t } = useLanguage();
+  const styles = SettingsScreenStyles(getFontSize);
   const [settings, setSettings] = useState({
     // Accessibility Settings
     largeText: true,
@@ -62,6 +68,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showTimeFormatModal, setShowTimeFormatModal] = useState(false);
   const [showAutoLockModal, setShowAutoLockModal] = useState(false);
+  const [showFontSizeModal, setShowFontSizeModal] = useState(false);
 
   const handleToggle = (key: string) => {
     setSettings(prev => ({
@@ -188,35 +195,53 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
     </View>
   );
 
+  const getFontSizeLabel = (scale: FontSizeScale): string => {
+    switch (scale) {
+      case 'small': return 'Small (85%)';
+      case 'medium': return 'Medium (100% - Default)';
+      case 'large': return 'Large (125%)';
+      case 'extraLarge': return 'Extra Large (150%)';
+      default: return 'Medium (100%)';
+    }
+  };
+
   const accessibilitySettings: SettingItem[] = [
     {
+      id: 'fontSize',
+      title: t('settings.font_size'),
+      description: getFontSizeLabel(fontSizeScale),
+      icon: 'text-outline',
+      type: 'navigation',
+      onPress: () => setShowFontSizeModal(true),
+    },
+    {
       id: 'largeText',
-      title: 'Large Text',
-      description: 'Increase text size for better readability',
+      title: t('settings.large_text'),
+      description: t('settings.large_text_desc'),
       icon: 'text-outline',
       type: 'toggle',
       value: settings.largeText,
     },
     {
       id: 'highContrast',
-      title: 'High Contrast Mode',
-      description: 'Enhanced contrast for better visibility',
+      title: t('settings.high_contrast'),
+      description: t('settings.high_contrast_desc'),
       icon: 'contrast-outline',
       type: 'toggle',
       value: settings.highContrast,
     },
     {
       id: 'voiceFeedback',
-      title: 'Voice Feedback',
-      description: 'Audio confirmation for actions',
+      title: t('settings.voice_feedback'),
+      description: t('settings.voice_feedback_desc'),
       icon: 'volume-high-outline',
       type: 'toggle',
       value: settings.voiceFeedback,
     },
     {
       id: 'hapticFeedback',
-      title: 'Haptic Feedback',
-      description: 'Vibration feedback for touch interactions',
+      title: t('settings.haptic_feedback'),
+      description: t('settings.haptic_feedback_desc'),
       icon: 'phone-portrait-outline',
       type: 'toggle',
       value: settings.hapticFeedback,
@@ -226,39 +251,39 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const notificationSettings: SettingItem[] = [
     {
       id: 'medicationReminders',
-      title: 'Medication Reminders',
-      description: 'Get notified when it\'s time to take medication',
+      title: t('settings.medication_reminders'),
+      description: t('settings.medication_reminders_desc'),
       icon: 'medical-outline',
       type: 'toggle',
       value: settings.medicationReminders,
     },
     {
       id: 'healthCheckReminders',
-      title: 'Health Check Reminders',
-      description: 'Reminders for regular health monitoring',
+      title: t('settings.health_check_reminders'),
+      description: t('settings.health_check_reminders_desc'),
       icon: 'heart-outline',
       type: 'toggle',
       value: settings.healthCheckReminders,
     },
     {
       id: 'activityReminders',
-      title: 'Activity Reminders',
-      description: 'Gentle reminders for daily activities',
+      title: t('settings.activity_reminders'),
+      description: t('settings.activity_reminders_desc'),
       icon: 'fitness-outline',
       type: 'toggle',
       value: settings.activityReminders,
     },
     {
       id: 'emergencyAlerts',
-      title: 'Emergency Alerts',
-      description: 'Critical health and safety notifications',
+      title: t('settings.emergency_alerts'),
+      description: t('settings.emergency_alerts_desc'),
       icon: 'warning-outline',
       type: 'toggle',
       value: settings.emergencyAlerts,
     },
     {
       id: 'quietHours',
-      title: 'Quiet Hours',
+      title: t('settings.quiet_hours'),
       description: `${settings.quietStartTime} - ${settings.quietEndTime}`,
       icon: 'moon-outline',
       type: 'navigation',
@@ -269,32 +294,32 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const privacySettings: SettingItem[] = [
     {
       id: 'shareWithFamily',
-      title: 'Share with Family',
-      description: 'Allow family members to view your health data',
+      title: t('settings.share_family'),
+      description: t('settings.share_family_desc'),
       icon: 'people-outline',
       type: 'toggle',
       value: settings.shareWithFamily,
     },
     {
       id: 'shareWithDoctor',
-      title: 'Share with Doctor',
-      description: 'Allow healthcare providers to access your data',
+      title: t('settings.share_doctor'),
+      description: t('settings.share_doctor_desc'),
       icon: 'person-outline',
       type: 'toggle',
       value: settings.shareWithDoctor,
     },
     {
       id: 'locationTracking',
-      title: 'Location Tracking',
-      description: 'Track location for emergency services',
+      title: t('settings.location_tracking'),
+      description: t('settings.location_tracking_desc'),
       icon: 'location-outline',
       type: 'toggle',
       value: settings.locationTracking,
     },
     {
       id: 'dataBackup',
-      title: 'Data Backup',
-      description: 'Automatically backup your health data',
+      title: t('settings.data_backup'),
+      description: t('settings.data_backup_desc'),
       icon: 'cloud-outline',
       type: 'toggle',
       value: settings.dataBackup,
@@ -304,8 +329,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const appSettings: SettingItem[] = [
     {
       id: 'language',
-      title: 'Language',
-      description: settings.language,
+      title: t('settings.language'),
+      description: language,
       icon: 'language-outline',
       type: 'navigation',
       onPress: () => setShowLanguageModal(true),
@@ -331,24 +356,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const dataSettings: SettingItem[] = [
     {
       id: 'exportData',
-      title: 'Export Data',
-      description: 'Download your health data',
+      title: t('settings.export_data'),
+      description: t('settings.export_data_desc'),
       icon: 'download-outline',
       type: 'action',
       onPress: handleExportData,
     },
     {
       id: 'resetSettings',
-      title: 'Reset Settings',
-      description: 'Restore default settings',
+      title: t('settings.reset_settings'),
+      description: t('settings.reset_settings_desc'),
       icon: 'refresh-outline',
       type: 'action',
       onPress: handleResetSettings,
     },
     {
       id: 'deleteAccount',
-      title: 'Delete Account',
-      description: 'Permanently delete your account',
+      title: t('settings.delete_account'),
+      description: t('settings.delete_account_desc'),
       icon: 'trash-outline',
       type: 'action',
       onPress: handleDeleteAccount,
@@ -366,16 +391,16 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {renderSection('Accessibility', accessibilitySettings)}
-        {renderSection('Notifications', notificationSettings)}
-        {renderSection('Privacy & Sharing', privacySettings)}
-        {renderSection('App Preferences', appSettings)}
-        {renderSection('Data & Account', dataSettings)}
+        {renderSection(t('settings.accessibility'), accessibilitySettings)}
+        {renderSection(t('settings.notifications'), notificationSettings)}
+        {renderSection(t('settings.privacy_sharing'), privacySettings)}
+        {renderSection(t('settings.app_preferences'), appSettings)}
+        {renderSection(t('settings.data_account'), dataSettings)}
       </ScrollView>
 
       {/* Quiet Hours Modal */}
@@ -387,7 +412,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Quiet Hours</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Quiet Hours</Text>
+              <TouchableOpacity onPress={() => setShowQuietHoursModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.modalDescription}>
               Set times when you don't want to receive non-emergency notifications.
             </Text>
@@ -430,19 +460,25 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Language</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('settings.language')}</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
             
-            {['English', 'Spanish', 'French', 'German', 'Chinese'].map((language) => (
+            {(['English', 'Spanish', 'French', 'German', 'Chinese'] as Language[]).map((lang) => (
               <TouchableOpacity
-                key={language}
+                key={lang}
                 style={styles.optionItem}
                 onPress={() => {
-                  handleSelect('language', language);
+                  setLanguage(lang);
+                  handleSelect('language', lang);
                   setShowLanguageModal(false);
                 }}
               >
-                <Text style={styles.optionText}>{language}</Text>
-                {settings.language === language && (
+                <Text style={styles.optionText}>{lang}</Text>
+                {language === lang && (
                   <Ionicons name="checkmark" size={20} color="#667eea" />
                 )}
               </TouchableOpacity>
@@ -467,7 +503,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Time Format</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Time Format</Text>
+              <TouchableOpacity onPress={() => setShowTimeFormatModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
             
             {[
               { value: '12h', label: '12-hour (AM/PM)' },
@@ -507,7 +548,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Auto Lock</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Auto Lock</Text>
+              <TouchableOpacity onPress={() => setShowAutoLockModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.modalDescription}>
               Automatically lock the app after a period of inactivity.
             </Text>
@@ -555,11 +601,64 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Font Size Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showFontSizeModal}
+        onRequestClose={() => setShowFontSizeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('font_size.title')}</Text>
+              <TouchableOpacity onPress={() => setShowFontSizeModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalDescription}>
+              {t('font_size.desc')}
+            </Text>
+            
+            {[
+              { value: 'small', label: t('font_size.small'), desc: t('font_size.small_desc') },
+              { value: 'medium', label: t('font_size.medium'), desc: t('font_size.medium_desc') },
+              { value: 'large', label: t('font_size.large'), desc: t('font_size.large_desc') },
+              { value: 'extraLarge', label: t('font_size.extra_large'), desc: t('font_size.extra_large_desc') }
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.optionItem}
+                onPress={() => {
+                  setFontSizeScale(option.value as FontSizeScale);
+                  setShowFontSizeModal(false);
+                }}
+              >
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionText}>{option.label}</Text>
+                  <Text style={styles.optionDesc}>{option.desc}</Text>
+                </View>
+                {fontSizeScale === option.value && (
+                  <Ionicons name="checkmark" size={20} color="#667eea" />
+                )}
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowFontSizeModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 };
 
-const styles = StyleSheet.create({
+const SettingsScreenStyles = (getFontSize: (base: number) => number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -574,7 +673,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: getFontSize(24),
     fontWeight: 'bold',
     color: '#FFFFFF',
     flex: 1,
@@ -592,7 +691,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: getFontSize(20),
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 15,
@@ -629,15 +728,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingTitle: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 3,
   },
   settingDescription: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 18,
+    lineHeight: getFontSize(18),
   },
   settingRight: {
     marginLeft: 15,
@@ -645,26 +744,32 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    borderRadius: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
     padding: 30,
     width: '100%',
-    maxWidth: 400,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: getFontSize(20),
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 10,
-    textAlign: 'center',
   },
   modalDescription: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     marginBottom: 20,
@@ -702,9 +807,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
+  optionContent: {
+    flex: 1,
+  },
   optionText: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  optionDesc: {
+    fontSize: getFontSize(12),
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 2,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -714,7 +828,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   toggleLabel: {
-    fontSize: 16,
+    fontSize: getFontSize(16),
     color: '#FFFFFF',
   },
   timeOptions: {
@@ -733,7 +847,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#667eea',
   },
   timeOptionText: {
-    fontSize: 14,
+    fontSize: getFontSize(14),
     color: '#FFFFFF',
   },
   timeOptionTextSelected: {
@@ -757,14 +871,14 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
   },
   saveButtonText: {
     color: '#667eea',
-    fontSize: 16,
+    fontSize: getFontSize(16),
     fontWeight: '600',
   },
 });
 
-export default SettingsScreen;
+export default SettingsScreenComponent;

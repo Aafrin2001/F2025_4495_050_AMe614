@@ -8,6 +8,10 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -367,14 +371,25 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
       {/* Add Activity Modal */}
       {showAddActivity && (
         <Modal
-          animationType="fade"
+          animationType="slide"
           transparent={true}
           visible={showAddActivity}
           onRequestClose={() => setShowAddActivity(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add New Activity</Text>
+          <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+            <View style={styles.modalOverlay}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.modalContainer}
+              >
+                <TouchableWithoutFeedback onPress={() => {}}>
+                  <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Add New Activity</Text>
+                      <TouchableOpacity onPress={() => setShowAddActivity(false)}>
+                        <Ionicons name="close" size={24} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
               
               <View style={styles.formGroup}>
                 <Text style={styles.formLabel}>Activity Name</Text>
@@ -426,8 +441,11 @@ const ActivitiesScreen: React.FC<ActivitiesScreenProps> = ({
                   <Text style={styles.saveButtonText}>Add Activity</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
           </View>
+        </TouchableWithoutFeedback>
         </Modal>
       )}
     </LinearGradient>
@@ -620,6 +638,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontWeight: '600',
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -628,6 +659,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    width: '100%',
+    maxHeight: '70%',
+  },
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 20,
     padding: 30,

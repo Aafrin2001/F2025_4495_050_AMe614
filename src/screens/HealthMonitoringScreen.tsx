@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -555,18 +556,32 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
 
         {/* Vital Input Modal */}
         {selectedVital && (
-          <View style={styles.modalOverlay}>
+          <Modal
+            visible={!!selectedVital}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={handleCancel}
+          >
             <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <View style={styles.modalBackdrop} />
-            </TouchableWithoutFeedback>
-            <View style={[
-              styles.modalContent,
-              isKeyboardVisible && styles.modalContentKeyboardVisible
-            ]}>
-              <View style={styles.modalFormContent}>
-                <Text style={styles.modalTitle}>
-                  Record {selectedVital.name}
-                </Text>
+              <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                  style={styles.modalContainer}
+                >
+                  <TouchableWithoutFeedback onPress={() => {}}>
+                    <View style={[
+                      styles.modalContent,
+                      isKeyboardVisible && styles.modalContentKeyboardVisible
+                    ]}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>
+                          Record {selectedVital.name}
+                        </Text>
+                        <TouchableOpacity onPress={handleCancel}>
+                          <Ionicons name="close" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.modalFormContent}>
                 
                 {selectedVital.metric_type === 'blood_pressure' 
                   ? renderBloodPressureInput() 
@@ -609,23 +624,41 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
                     <Text style={styles.saveButtonText}>Save</Text>
                   )}
                 </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
               </View>
-            </View>
-          </View>
+            </TouchableWithoutFeedback>
+          </Modal>
         )}
 
         {/* Add Reading Modal */}
         {showAddReading && (
-          <View style={styles.modalOverlay}>
+          <Modal
+            visible={showAddReading}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowAddReading(false)}
+          >
             <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <View style={styles.modalBackdrop} />
-            </TouchableWithoutFeedback>
-            <View style={[
-              styles.modalContent,
-              isKeyboardVisible && styles.modalContentKeyboardVisible
-            ]}>
-              <View style={styles.modalFormContent}>
-                <Text style={styles.modalTitle}>Add New Reading</Text>
+              <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                  style={styles.modalContainer}
+                >
+                  <TouchableWithoutFeedback onPress={() => {}}>
+                    <View style={[
+                      styles.modalContent,
+                      isKeyboardVisible && styles.modalContentKeyboardVisible
+                    ]}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Add New Reading</Text>
+                        <TouchableOpacity onPress={() => setShowAddReading(false)}>
+                          <Ionicons name="close" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.modalFormContent}>
                 
                 <View style={styles.formGroup}>
                   <Text style={styles.formLabel}>Metric Type</Text>
@@ -669,33 +702,37 @@ const HealthMonitoringScreen: React.FC<HealthMonitoringScreenProps> = ({
                     numberOfLines={3}
                   />
                 </View>
-              </View>
+                      </View>
 
-              <View style={[
-                styles.modalButtons,
-                isKeyboardVisible && styles.modalButtonsKeyboardVisible
-              ]}>
-                <TouchableOpacity
-                  style={styles.modalButton}
-                  onPress={handleCancel}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.saveButton]}
-                  onPress={handleAddReading}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color="#667eea" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>Add Reading</Text>
-                  )}
-                </TouchableOpacity>
+                      <View style={[
+                        styles.modalButtons,
+                        isKeyboardVisible && styles.modalButtonsKeyboardVisible
+                      ]}>
+                        <TouchableOpacity
+                          style={styles.modalButton}
+                          onPress={() => setShowAddReading(false)}
+                          disabled={isLoading}
+                        >
+                          <Text style={styles.modalButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.modalButton, styles.saveButton]}
+                          onPress={handleAddReading}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <ActivityIndicator size="small" color="#667eea" />
+                          ) : (
+                            <Text style={styles.saveButtonText}>Add Reading</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
               </View>
-            </View>
-          </View>
+            </TouchableWithoutFeedback>
+          </Modal>
         )}
       </LinearGradient>
     </KeyboardAvoidingView>
@@ -837,31 +874,31 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
   },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
     width: '100%',
-    maxWidth: 300,
-    maxHeight: '80%',
+    maxHeight: '70%',
   },
   modalContentKeyboardVisible: {
     maxHeight: '75%',
@@ -875,8 +912,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   modalInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',

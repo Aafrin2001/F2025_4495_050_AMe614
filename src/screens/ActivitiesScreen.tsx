@@ -654,9 +654,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -666,18 +664,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: '70%',
   },
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 20,
-    padding: 30,
-    width: '100%',
-    maxWidth: 350,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 20,
-    textAlign: 'center',
   },
   formGroup: {
     marginBottom: 20,

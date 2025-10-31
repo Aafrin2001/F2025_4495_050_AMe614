@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Language = 'English' | 'Spanish' | 'French' | 'German' | 'Chinese';
 
@@ -9,6 +10,8 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+const LANGUAGE_STORAGE_KEY = '@health_companion_language';
 
 // Translation dictionary
 const translations: Record<Language, Record<string, string>> = {
@@ -411,6 +414,33 @@ const translations: Record<Language, Record<string, string>> = {
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('English');
+
+  // Load language from AsyncStorage on mount
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const storedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (storedLanguage && ['English', 'Spanish', 'French', 'German', 'Chinese'].includes(storedLanguage)) {
+          setLanguage(storedLanguage as Language);
+        }
+      } catch (error) {
+        console.error('Failed to load language from AsyncStorage', error);
+      }
+    };
+    loadLanguage();
+  }, []);
+
+  // Save language to AsyncStorage whenever it changes
+  useEffect(() => {
+    const saveLanguage = async () => {
+      try {
+        await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+      } catch (error) {
+        console.error('Failed to save language to AsyncStorage', error);
+      }
+    };
+    saveLanguage();
+  }, [language]);
 
   const t = (key: string): string => {
     return translations[language][key] || translations.English[key] || key;

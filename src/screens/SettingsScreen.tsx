@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,17 @@ import {
   Switch,
   Modal,
   Alert,
+  Vibration,
 } from 'react-native';
+// Haptics support - try to import, fallback if not available
+let Haptics: any = null;
+try {
+  Haptics = require('expo-haptics');
+} catch (e) {
+  // Haptics not available
+}
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,10 +46,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const styles = SettingsScreenStyles(getFontSize);
   const [settings, setSettings] = useState({
     // Accessibility Settings
-    largeText: true,
     highContrast: false,
-    voiceFeedback: true,
-    hapticFeedback: true,
     
     // Notification Settings
     medicationReminders: true,
@@ -62,6 +69,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
     autoLockTime: 5, // minutes
     language: 'English',
     timeFormat: '12h',
+    hapticFeedback: true, // Internal setting for haptic feedback functionality
   });
 
   const [showQuietHoursModal, setShowQuietHoursModal] = useState(false);
@@ -69,8 +77,56 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const [showTimeFormatModal, setShowTimeFormatModal] = useState(false);
   const [showAutoLockModal, setShowAutoLockModal] = useState(false);
   const [showFontSizeModal, setShowFontSizeModal] = useState(false);
+  const [showQuietStartTimePicker, setShowQuietStartTimePicker] = useState(false);
+  const [showQuietEndTimePicker, setShowQuietEndTimePicker] = useState(false);
+
+  const SETTINGS_STORAGE_KEY = '@health_companion_settings';
+
+  // Load settings from AsyncStorage on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const storedSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (storedSettings) {
+          const parsed = JSON.parse(storedSettings);
+          setSettings(prev => ({ ...prev, ...parsed }));
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  // Save settings to AsyncStorage whenever they change
+  useEffect(() => {
+    const saveSettings = async () => {
+      try {
+        await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+      }
+    };
+    saveSettings();
+  }, [settings]);
+
+  const triggerHapticFeedback = () => {
+    // Always enable haptic feedback for better UX
+    if (Platform.OS === 'ios' && Haptics) {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch (error) {
+        // Fallback to vibration if haptics fails
+        Vibration.vibrate(10);
+      }
+    } else {
+      // Android or iOS without haptics support
+      Vibration.vibrate(10);
+    }
+  };
 
   const handleToggle = (key: string) => {
+    triggerHapticFeedback();
     setSettings(prev => ({
       ...prev,
       [key]: !prev[key as keyof typeof prev]
@@ -78,6 +134,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
   };
 
   const handleSelect = (key: string, value: any) => {
+    triggerHapticFeedback();
     setSettings(prev => ({
       ...prev,
       [key]: value
@@ -117,6 +174,28 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
               language: 'English',
               timeFormat: '12h',
             });
+            const defaultSettings = {
+              highContrast: false,
+              medicationReminders: true,
+              healthCheckReminders: true,
+              activityReminders: true,
+              emergencyAlerts: true,
+              quietHours: false,
+              quietStartTime: '22:00',
+              quietEndTime: '08:00',
+              shareWithFamily: true,
+              shareWithDoctor: false,
+              locationTracking: false,
+              dataBackup: true,
+              darkMode: false,
+              autoLock: true,
+              autoLockTime: 5,
+              language: 'English',
+              timeFormat: '12h',
+              hapticFeedback: true, // Internal setting for haptic feedback functionality
+            };
+            setSettings(defaultSettings);
+            AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings));
             Alert.alert('Success', 'Settings have been reset to default values.');
           }
         }
@@ -215,36 +294,12 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
       onPress: () => setShowFontSizeModal(true),
     },
     {
-      id: 'largeText',
-      title: t('settings.large_text'),
-      description: t('settings.large_text_desc'),
-      icon: 'text-outline',
-      type: 'toggle',
-      value: settings.largeText,
-    },
-    {
       id: 'highContrast',
       title: t('settings.high_contrast'),
       description: t('settings.high_contrast_desc'),
       icon: 'contrast-outline',
       type: 'toggle',
       value: settings.highContrast,
-    },
-    {
-      id: 'voiceFeedback',
-      title: t('settings.voice_feedback'),
-      description: t('settings.voice_feedback_desc'),
-      icon: 'volume-high-outline',
-      type: 'toggle',
-      value: settings.voiceFeedback,
-    },
-    {
-      id: 'hapticFeedback',
-      title: t('settings.haptic_feedback'),
-      description: t('settings.haptic_feedback_desc'),
-      icon: 'phone-portrait-outline',
-      type: 'toggle',
-      value: settings.hapticFeedback,
     },
   ];
 
@@ -284,7 +339,9 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
     {
       id: 'quietHours',
       title: t('settings.quiet_hours'),
-      description: `${settings.quietStartTime} - ${settings.quietEndTime}`,
+      description: settings.quietHours 
+        ? `${settings.quietStartTime} - ${settings.quietEndTime}`
+        : 'Disabled',
       icon: 'moon-outline',
       type: 'navigation',
       onPress: () => setShowQuietHoursModal(true),
@@ -410,45 +467,152 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
         visible={showQuietHoursModal}
         onRequestClose={() => setShowQuietHoursModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Quiet Hours</Text>
-              <TouchableOpacity onPress={() => setShowQuietHoursModal(false)}>
-                <Ionicons name="close" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={() => setShowQuietHoursModal(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Quiet Hours</Text>
+                    <TouchableOpacity onPress={() => setShowQuietHoursModal(false)}>
+                      <Ionicons name="close" size={24} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.modalDescription}>
+                    Set times when you don't want to receive non-emergency notifications.
+                  </Text>
+                  
+                  <View style={styles.toggleRow}>
+                    <Text style={styles.toggleLabel}>Enable Quiet Hours</Text>
+                    <Switch
+                      value={settings.quietHours}
+                      onValueChange={(value) => handleSelect('quietHours', value)}
+                      trackColor={{ false: 'rgba(255, 255, 255, 0.3)', true: '#667eea' }}
+                      thumbColor="#FFFFFF"
+                    />
+                  </View>
+
+                  {settings.quietHours && (
+                    <>
+                      <View style={styles.timeRow}>
+                        <View style={styles.timeContainer}>
+                          <Text style={styles.timeLabel}>Start Time</Text>
+                          <TouchableOpacity
+                            style={styles.timeValueButton}
+                            onPress={() => setShowQuietStartTimePicker(true)}
+                          >
+                            <Text style={styles.timeValue}>{settings.quietStartTime}</Text>
+                            <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.timeContainer}>
+                          <Text style={styles.timeLabel}>End Time</Text>
+                          <TouchableOpacity
+                            style={styles.timeValueButton}
+                            onPress={() => setShowQuietEndTimePicker(true)}
+                          >
+                            <Text style={styles.timeValue}>{settings.quietEndTime}</Text>
+                            <Ionicons name="time-outline" size={20} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Time Pickers */}
+                      {showQuietStartTimePicker && (
+                        <DateTimePicker
+                          value={new Date(`1970-01-01T${settings.quietStartTime}:00`)}
+                          mode="time"
+                          is24Hour={settings.timeFormat === '24h'}
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={(event, selectedTime) => {
+                            if (Platform.OS === 'android') {
+                              setShowQuietStartTimePicker(false);
+                            }
+                            if (selectedTime) {
+                              const hours = selectedTime.getHours().toString().padStart(2, '0');
+                              const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+                              handleSelect('quietStartTime', `${hours}:${minutes}`);
+                              if (Platform.OS === 'ios') {
+                                setShowQuietStartTimePicker(false);
+                              }
+                            } else if (Platform.OS === 'android') {
+                              setShowQuietStartTimePicker(false);
+                            }
+                          }}
+                        />
+                      )}
+
+                      {showQuietEndTimePicker && (
+                        <DateTimePicker
+                          value={new Date(`1970-01-01T${settings.quietEndTime}:00`)}
+                          mode="time"
+                          is24Hour={settings.timeFormat === '24h'}
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={(event, selectedTime) => {
+                            if (Platform.OS === 'android') {
+                              setShowQuietEndTimePicker(false);
+                            }
+                            if (selectedTime) {
+                              const hours = selectedTime.getHours().toString().padStart(2, '0');
+                              const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+                              handleSelect('quietEndTime', `${hours}:${minutes}`);
+                              if (Platform.OS === 'ios') {
+                                setShowQuietEndTimePicker(false);
+                              }
+                            } else if (Platform.OS === 'android') {
+                              setShowQuietEndTimePicker(false);
+                            }
+                          }}
+                        />
+                      )}
+
+                      {Platform.OS === 'ios' && (showQuietStartTimePicker || showQuietEndTimePicker) && (
+                        <View style={styles.iosTimePickerContainer}>
+                          <TouchableOpacity
+                            style={styles.pickerDoneButton}
+                            onPress={() => {
+                              setShowQuietStartTimePicker(false);
+                              setShowQuietEndTimePicker(false);
+                            }}
+                          >
+                            <Text style={styles.pickerDoneButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </>
+                  )}
+                  
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={styles.modalButton}
+                      onPress={() => {
+                        setShowQuietHoursModal(false);
+                        setShowQuietStartTimePicker(false);
+                        setShowQuietEndTimePicker(false);
+                      }}
+                    >
+                      <Text style={styles.modalButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.saveButton]}
+                      onPress={() => {
+                        setShowQuietHoursModal(false);
+                        setShowQuietStartTimePicker(false);
+                        setShowQuietEndTimePicker(false);
+                        triggerHapticFeedback();
+                      }}
+                    >
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
             </View>
-            <Text style={styles.modalDescription}>
-              Set times when you don't want to receive non-emergency notifications.
-            </Text>
-            
-            <View style={styles.timeRow}>
-              <View style={styles.timeContainer}>
-                <Text style={styles.timeLabel}>Start Time</Text>
-                <Text style={styles.timeValue}>{settings.quietStartTime}</Text>
-              </View>
-              <View style={styles.timeContainer}>
-                <Text style={styles.timeLabel}>End Time</Text>
-                <Text style={styles.timeValue}>{settings.quietEndTime}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setShowQuietHoursModal(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={() => setShowQuietHoursModal(false)}
-              >
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Language Modal */}
@@ -472,6 +636,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
                 key={lang}
                 style={styles.optionItem}
                 onPress={() => {
+                  triggerHapticFeedback();
                   setLanguage(lang);
                   handleSelect('language', lang);
                   setShowLanguageModal(false);
@@ -518,6 +683,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
                 key={format.value}
                 style={styles.optionItem}
                 onPress={() => {
+                  triggerHapticFeedback();
                   handleSelect('timeFormat', format.value);
                   setShowTimeFormatModal(false);
                 }}
@@ -631,6 +797,7 @@ const SettingsScreenComponent: React.FC<SettingsScreenProps> = ({ onBack }) => {
                 key={option.value}
                 style={styles.optionItem}
                 onPress={() => {
+                  triggerHapticFeedback();
                   setFontSizeScale(option.value as FontSizeScale);
                   setShowFontSizeModal(false);
                 }}
@@ -793,10 +960,30 @@ const SettingsScreenStyles = (getFontSize: (base: number) => number) => StyleShe
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  timeValueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 10,
+    gap: 8,
+  },
+  iosTimePickerContainer: {
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  pickerDoneButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  pickerDoneButtonText: {
+    color: '#FFFFFF',
+    fontSize: getFontSize(16),
+    fontWeight: '600',
   },
   optionItem: {
     flexDirection: 'row',

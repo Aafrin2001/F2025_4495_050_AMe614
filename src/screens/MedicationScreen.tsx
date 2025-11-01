@@ -24,9 +24,10 @@ import { Medication, MedicationInput, MedicationScheduleItem, MedicationStats } 
 interface MedicationScreenProps {
   onBack: () => void;
   user: any;
+  userId?: string; // Optional: for caregivers viewing senior's medications
 }
 
-const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => {
+const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user, userId }) => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [stats, setStats] = useState<MedicationStats | null>(null);
   const [todaySchedule, setTodaySchedule] = useState<MedicationScheduleItem[]>([]);
@@ -103,7 +104,8 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   };
 
   const loadMedications = async () => {
-    const { success, data, error } = await MedicationService.getUserMedications();
+    const targetUserId = userId || undefined;
+    const { success, data, error } = await MedicationService.getUserMedications(targetUserId);
     if (success && data) {
       setMedications(data);
     } else {

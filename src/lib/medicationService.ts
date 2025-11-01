@@ -65,20 +65,32 @@ export class MedicationService {
 
   /**
    * Get user's medications from Supabase
+   * @param userId - Optional: user ID to fetch medications for (for caregivers viewing senior's data)
    */
-  static async getUserMedications(): Promise<{ success: boolean; data?: Medication[]; error?: string }> {
+  static async getUserMedications(userId?: string): Promise<{ success: boolean; data?: Medication[]; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getUserMedications - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getUserMedications - Using authenticated user id:', targetUserId);
       }
 
+      console.log('getUserMedications - Querying medications for user_id:', targetUserId);
       const { data, error } = await supabase
         .from('medications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
+      
+      console.log('getUserMedications - Query result:', { dataCount: data?.length, error });
 
       if (error) {
         console.error('Error fetching medications:', error);

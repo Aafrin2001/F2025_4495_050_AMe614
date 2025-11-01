@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { User } from '../types';
 import { useFontSize } from '../contexts/FontSizeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useActivityTracking } from '../contexts/ActivityTrackingContext';
+import { supabase } from '../lib/supabase';
 
 interface MainScreenProps {
   user: User | null;
@@ -24,6 +25,7 @@ interface MainScreenProps {
   onCreateJob: () => void;
   onViewJobs: () => void;
   onHealthMonitoring: () => void;
+  onCaregiverApproval?: () => void;
 }
 
 const MainScreen: React.FC<MainScreenProps> = ({ 
@@ -34,12 +36,41 @@ const MainScreen: React.FC<MainScreenProps> = ({
   onSettingsPress, 
   onCreateJob, 
   onViewJobs,
-  onHealthMonitoring
+  onHealthMonitoring,
+  onCaregiverApproval
 }) => {
   const { getFontSize } = useFontSize();
   const { t } = useLanguage();
   const { activeActivity, stopActivity } = useActivityTracking();
   const styles = MainScreenStyles(getFontSize);
+  const [pendingCaregiverRequests, setPendingCaregiverRequests] = useState(0);
+
+  useEffect(() => {
+    // Load pending caregiver requests for seniors
+    if (user && user.userType === 'hire') {
+      loadPendingRequests();
+      // Refresh every 30 seconds to check for new requests
+      const interval = setInterval(loadPendingRequests, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const loadPendingRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('caregiver_relationships')
+        .select('id')
+        .eq('senior_email', user?.email?.toLowerCase())
+        .eq('status', 'pending');
+      
+      if (!error && data) {
+        setPendingCaregiverRequests(data.length);
+      }
+    } catch (error) {
+      // Silently fail - don't disrupt the UI
+      console.error('Error loading pending requests:', error);
+    }
+  };
 
   const formatActivityTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -193,6 +224,30 @@ const MainScreen: React.FC<MainScreenProps> = ({
               </View>
             )}
           </View>
+        )}
+
+        {/* Pending Caregiver Requests Notification */}
+        {user?.userType === 'hire' && pendingCaregiverRequests > 0 && onCaregiverApproval && (
+          <TouchableOpacity 
+            style={styles.notificationCard}
+            onPress={onCaregiverApproval}
+            activeOpacity={0.7}
+          >
+            <View style={styles.notificationContent}>
+              <Ionicons name="notifications" size={24} color="#FFFFFF" />
+              <View style={styles.notificationTextContainer}>
+                <Text style={styles.notificationTitle}>
+                  {pendingCaregiverRequests} Caregiver Request{pendingCaregiverRequests !== 1 ? 's' : ''} Pending
+                </Text>
+                <Text style={styles.notificationSubtext}>
+                  Tap to review and approve
+                </Text>
+              </View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCaregiverRequests}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
         )}
         
         <View style={styles.welcomeCard}>
@@ -370,6 +425,50 @@ const MainScreenStyles = (getFontSize: (base: number) => number) => StyleSheet.c
     fontSize: getFontSize(12),
     color: 'rgba(255, 255, 255, 0.8)',
     textTransform: 'uppercase',
+  },
+  notificationCard: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  notificationContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  notificationTextContainer: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  notificationTitle: {
+    fontSize: getFontSize(16),
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  notificationSubtext: {
+    fontSize: getFontSize(14),
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  badge: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    fontSize: getFontSize(12),
+    fontWeight: 'bold',
+    color: '#FF6B6B',
   },
   welcomeCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',

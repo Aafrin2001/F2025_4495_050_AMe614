@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,37 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
   const [showAddSeniorModal, setShowAddSeniorModal] = useState(!caregiver.seniorEmail);
   const [seniorEmail, setSeniorEmail] = useState(caregiver.seniorEmail || '');
   const [isLoading, setIsLoading] = useState(false);
+  const [actualSeniorUserId, setActualSeniorUserId] = useState<string>(seniorUserId);
+
+  // Reload relationship when component mounts to ensure we have the latest data
+  useEffect(() => {
+    const loadRelationship = async () => {
+      if (!caregiver.id) return;
+      
+      try {
+        const relationship = await CaregiverService.getSeniorUserId(caregiver.id);
+        if (relationship.success && relationship.seniorUserId) {
+          console.log('Loaded relationship:', relationship);
+          setActualSeniorUserId(relationship.seniorUserId);
+          if (onSeniorAdded) {
+            onSeniorAdded(relationship.seniorEmail || '', relationship.seniorUserId);
+          }
+        } else {
+          console.log('No approved relationship found:', relationship.error);
+          setActualSeniorUserId('');
+        }
+      } catch (error) {
+        console.error('Error loading relationship:', error);
+      }
+    };
+
+    // Only load if we don't have a seniorUserId yet
+    if (!seniorUserId && caregiver.userType === 'offer') {
+      loadRelationship();
+    } else {
+      setActualSeniorUserId(seniorUserId);
+    }
+  }, [caregiver.id, seniorUserId]);
 
   const handleAddSenior = async () => {
     if (!seniorEmail.trim()) {
@@ -227,7 +258,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
         {/* Welcome Card */}
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>Welcome, {caregiver.firstName}!</Text>
-          {!seniorUserId ? (
+          {!actualSeniorUserId ? (
             <View style={styles.pendingCard}>
               <Ionicons name="hourglass-outline" size={32} color="#FFA726" style={styles.pendingIcon} />
               <Text style={styles.pendingTitle}>

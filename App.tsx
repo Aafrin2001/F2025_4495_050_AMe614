@@ -29,8 +29,9 @@ import MedicationScreen from './src/screens/MedicationScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import CaregiverDashboardScreen from './src/screens/CaregiverDashboardScreen';
+import CaregiverApprovalScreen from './src/screens/CaregiverApprovalScreen';
 
-type Screen = 'splash' | 'onboarding' | 'auth' | 'main' | 'caregiverDashboard' | 'healthMonitoring' | 'scheduleCheck' | 'chatSelection' | 'aiChat' | 'voiceChat' | 'activities' | 'walkingTracker' | 'stretching' | 'breathing' | 'sleepCycle' | 'memoryMatch' | 'wordSearch' | 'puzzlePieces' | 'numberSequence' | 'medication' | 'adminDashboard' | 'settings';
+type Screen = 'splash' | 'onboarding' | 'auth' | 'main' | 'caregiverDashboard' | 'caregiverApproval' | 'healthMonitoring' | 'scheduleCheck' | 'chatSelection' | 'aiChat' | 'voiceChat' | 'activities' | 'walkingTracker' | 'stretching' | 'breathing' | 'sleepCycle' | 'memoryMatch' | 'wordSearch' | 'puzzlePieces' | 'numberSequence' | 'medication' | 'adminDashboard' | 'settings';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
@@ -98,6 +99,16 @@ export default function App() {
           phoneNumber: session.user.user_metadata?.phoneNumber,
           userType: session.user.user_metadata?.userType || 'hire'
         };
+        
+        // If caregiver, load relationship to get seniorUserId
+        if (userData.userType === 'offer') {
+          const relationship = await CaregiverService.getSeniorUserId(userData.id);
+          if (relationship.success && relationship.seniorUserId) {
+            userData.seniorUserId = relationship.seniorUserId;
+            userData.seniorEmail = relationship.seniorEmail;
+          }
+        }
+        
         setUser(userData);
         // Route caregivers to caregiver dashboard (even if pending), seniors to main screen
         if (userData.userType === 'offer') {
@@ -129,7 +140,15 @@ export default function App() {
   };
 
 
-  const handleAuthSuccess = (userData: User) => {
+  const handleAuthSuccess = async (userData: User) => {
+    // If caregiver, load relationship to get seniorUserId
+    if (userData.userType === 'offer') {
+      const relationship = await CaregiverService.getSeniorUserId(userData.id);
+      if (relationship.success && relationship.seniorUserId) {
+        userData.seniorUserId = relationship.seniorUserId;
+        userData.seniorEmail = relationship.seniorEmail;
+      }
+    }
     setUser(userData);
     // Route caregivers to caregiver dashboard (even if pending), seniors to main screen
     if (userData.userType === 'offer') {
@@ -163,6 +182,10 @@ export default function App() {
 
   const handleViewJobs = () => {
     setCurrentScreen('adminDashboard');
+  };
+
+  const handleCaregiverApproval = () => {
+    setCurrentScreen('caregiverApproval');
   };
 
   const handleHealthMonitoring = () => {
@@ -253,6 +276,17 @@ export default function App() {
             onCreateJob={handleCreateJob}
             onViewJobs={handleViewJobs}
             onHealthMonitoring={handleHealthMonitoring}
+            onCaregiverApproval={handleCaregiverApproval}
+          />
+        );
+      case 'caregiverApproval':
+        return (
+          <CaregiverApprovalScreen
+            onBack={handleBackToMain}
+            onApprovalComplete={() => {
+              setCurrentScreen('main');
+              // Refresh user data if needed
+            }}
           />
         );
       case 'caregiverDashboard':
@@ -312,7 +346,7 @@ export default function App() {
         return (
           <CaregiverDashboardScreen
             caregiver={user}
-            seniorUserId={user.seniorUserId}
+            seniorUserId={user.seniorUserId || ''}
             onBack={handleBackToMain}
             onViewAlerts={() => setCurrentScreen('adminDashboard')}
             onViewDashboard={() => setCurrentScreen('adminDashboard')}
@@ -383,11 +417,13 @@ export default function App() {
         // Pass seniorUserId if user is a caregiver
         const medicationUserId = user?.userType === 'offer' && user?.seniorUserId 
           ? user.seniorUserId 
-          : user?.id || '';
+          : undefined;
+        console.log('MedicationScreen - userId:', medicationUserId, 'user:', user);
         return (
           <MedicationScreen 
             onBack={user?.userType === 'offer' ? () => setCurrentScreen('caregiverDashboard') : handleBackToMain} 
-            user={{ ...user, id: medicationUserId } as User} 
+            user={user}
+            userId={medicationUserId}
           />
         );
       case 'adminDashboard':

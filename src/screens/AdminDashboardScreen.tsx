@@ -59,7 +59,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
         clearInterval(refreshTimer.current);
       }
     };
-  }, [selectedTimeframe]);
+  }, [selectedTimeframe, userId]);
 
   const loadAllData = async (isRefresh = false) => {
     if (isRefresh) {
@@ -77,12 +77,12 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
         dailyActivitiesResult,
         inactivityAlertsResult,
       ] = await Promise.all([
-        AdminDashboardService.getDashboardStats(selectedTimeframe),
-        AdminDashboardService.getHealthTrends(selectedTimeframe),
-        AdminDashboardService.getMedicationAlerts(),
-        AdminDashboardService.getEmergencyAlerts(),
-        AdminDashboardService.getDailyActivities(selectedTimeframe),
-        AdminDashboardService.getInactivityAlerts(),
+        AdminDashboardService.getDashboardStats(selectedTimeframe, userId),
+        AdminDashboardService.getHealthTrends(selectedTimeframe, userId),
+        AdminDashboardService.getMedicationAlerts(userId),
+        AdminDashboardService.getEmergencyAlerts(userId),
+        AdminDashboardService.getDailyActivities(selectedTimeframe, userId),
+        AdminDashboardService.getInactivityAlerts(userId),
       ]);
 
       if (statsResult.success) setStats(statsResult.data || null);
@@ -606,8 +606,10 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
             onPress={() => setShowEmergencyAlerts(true)}
           >
             <Ionicons name="warning" size={24} color="#FFFFFF" />
-            <Text style={styles.actionText}>Emergencies</Text>
-            <Text style={styles.actionSubtext}>{emergencyAlerts.length} alerts</Text>
+            <Text style={styles.actionText}>Critical Alerts</Text>
+            <Text style={styles.actionSubtext}>
+              {emergencyAlerts.filter(a => a.severity === 'Critical').length} critical
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -635,15 +637,21 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
           )}
         </View>
 
-        {/* Critical Alerts Preview */}
-        {emergencyAlerts.filter(a => a.severity === 'Critical').length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Critical Alerts</Text>
+        {/* Critical Alerts Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Critical Alerts</Text>
+          {emergencyAlerts.filter(a => a.severity === 'Critical').length > 0 ? (
             <View style={styles.alertsList}>
-              {emergencyAlerts.filter(a => a.severity === 'Critical').slice(0, 3).map(renderEmergencyAlertCard)}
+              {emergencyAlerts.filter(a => a.severity === 'Critical').map(renderEmergencyAlertCard)}
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="checkmark-circle" size={64} color="rgba(255, 255, 255, 0.5)" />
+              <Text style={styles.emptyStateText}>No critical alerts</Text>
+              <Text style={styles.emptyStateSubtext}>Nothing to worry about</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       {/* Health Trends Modal */}
@@ -704,7 +712,7 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
         </View>
       </Modal>
 
-      {/* Emergency Alerts Modal */}
+      {/* Critical Alerts Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -714,19 +722,22 @@ const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ onBack, use
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Emergency Alerts ({emergencyAlerts.length})</Text>
+              <Text style={styles.modalTitle}>
+                Critical Alerts ({emergencyAlerts.filter(a => a.severity === 'Critical').length})
+              </Text>
               <TouchableOpacity onPress={() => setShowEmergencyAlerts(false)}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.alertsList}>
-              {emergencyAlerts.length === 0 ? (
+              {emergencyAlerts.filter(a => a.severity === 'Critical').length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Ionicons name="warning-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
-                  <Text style={styles.emptyStateText}>No emergency alerts</Text>
+                  <Ionicons name="checkmark-circle" size={64} color="rgba(255, 255, 255, 0.5)" />
+                  <Text style={styles.emptyStateText}>No critical alerts</Text>
+                  <Text style={styles.emptyStateSubtext}>Nothing to worry about</Text>
                 </View>
               ) : (
-                emergencyAlerts.map(renderEmergencyAlertCard)
+                emergencyAlerts.filter(a => a.severity === 'Critical').map(renderEmergencyAlertCard)
               )}
             </ScrollView>
           </View>
@@ -918,9 +929,15 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginTop: 10,
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 15,
+    fontWeight: '600',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 8,
   },
   activitiesList: {
     gap: 15,

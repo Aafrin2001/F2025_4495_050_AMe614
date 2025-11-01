@@ -72,28 +72,36 @@ export interface InactivityAlert {
 
 export class AdminDashboardService {
   /**
-   * Get dashboard statistics for a specific timeframe (for current user only)
+   * Get dashboard statistics for a specific timeframe
+   * @param timeframe - Time period for stats (7d, 30d, 90d)
+   * @param userId - Optional: user ID to fetch stats for (for caregivers viewing senior's data)
    */
-  static async getDashboardStats(timeframe: '7d' | '30d' | '90d'): Promise<{ success: boolean; data?: AdminDashboardStats; error?: string }> {
+  static async getDashboardStats(timeframe: '7d' | '30d' | '90d', userId?: string): Promise<{ success: boolean; data?: AdminDashboardStats; error?: string }> {
     try {
       const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('Error fetching current user:', userError);
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getDashboardStats - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Error fetching current user:', userError);
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getDashboardStats - Using authenticated user id:', targetUserId);
       }
-
-      const userId = user.id;
 
       // Check if user is active (has any data in the timeframe)
       const { data: activities } = await supabase
         .from('activities')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .gte('created_at', startDate.toISOString())
         .limit(1);
 
@@ -103,7 +111,7 @@ export class AdminDashboardService {
       const { data: walkActivities } = await supabase
         .from('activities')
         .select('distance')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('type', 'walk')
         .gte('created_at', startDate.toISOString());
 
@@ -114,7 +122,7 @@ export class AdminDashboardService {
       const { data: sleepActivities } = await supabase
         .from('activities')
         .select('duration')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('type', 'sleep')
         .gte('created_at', startDate.toISOString());
 
@@ -125,7 +133,7 @@ export class AdminDashboardService {
       const { data: medications } = await supabase
         .from('medications')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('is_active', true);
 
       const medicationAdherence = medications && medications.length > 0 ? 85 : 0; // Mock adherence
@@ -137,7 +145,7 @@ export class AdminDashboardService {
       const { data: criticalMeds } = await supabase
         .from('medications')
         .select('refill_date')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('is_active', true)
         .not('refill_date', 'is', null);
 
@@ -266,15 +274,29 @@ export class AdminDashboardService {
   }
 
   /**
-   * Get medication alerts for current user
+   * Get medication alerts
+   * @param userId - Optional: user ID to fetch alerts for (for caregivers viewing senior's data)
    */
-  static async getMedicationAlerts(): Promise<{ success: boolean; data?: MedicationAlert[]; error?: string }> {
+  static async getMedicationAlerts(userId?: string): Promise<{ success: boolean; data?: MedicationAlert[]; error?: string }> {
     try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('Error fetching current user:', userError);
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      let userName: string = 'User';
+      if (userId) {
+        targetUserId = userId;
+        // Try to get user name from profiles or user_metadata if needed
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
+        }
+      } else {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Error fetching current user:', userError);
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
       }
 
       const { data: medications, error } = await supabase
@@ -286,7 +308,7 @@ export class AdminDashboardService {
           refill_date,
           created_at
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('is_active', true)
         .not('refill_date', 'is', null);
 
@@ -297,7 +319,6 @@ export class AdminDashboardService {
 
       const alerts: MedicationAlert[] = [];
       const today = new Date();
-      const userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
 
       medications?.forEach(med => {
         if (med.refill_date) {
@@ -309,7 +330,7 @@ export class AdminDashboardService {
               id: med.id,
               medicationName: med.name,
               userId: med.user_id,
-              userName: userName.trim(),
+              userName: trimmedUserName,
               refillDate: med.refill_date,
               daysUntilRefill,
               isCritical: daysUntilRefill <= 3,
@@ -335,33 +356,60 @@ export class AdminDashboardService {
   }
 
   /**
-   * Get emergency alerts based on health metrics and activity patterns (for current user)
+   * Get emergency alerts based on health metrics and activity patterns
+   * @param userId - Optional: user ID to fetch alerts for (for caregivers viewing senior's data)
    */
-  static async getEmergencyAlerts(): Promise<{ success: boolean; data?: EmergencyAlert[]; error?: string }> {
+  static async getEmergencyAlerts(userId?: string): Promise<{ success: boolean; data?: EmergencyAlert[]; error?: string }> {
     try {
       const alerts: EmergencyAlert[] = [];
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('Error fetching current user:', userError);
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      let userName: string = 'User';
+      if (userId) {
+        targetUserId = userId;
+        // Try to get user name from profiles table
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', userId)
+            .single();
+          if (profile) {
+            userName = `${profile.first_name || 'User'} ${profile.last_name || ''}`;
+          }
+        } catch (error) {
+          // Fallback to 'User' if profile not found
+          console.log('Could not fetch profile for userId:', userId);
+        }
+      } else {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Error fetching current user:', userError);
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
       }
 
-      const userId = user.id;
-      const userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
+      console.log('getEmergencyAlerts - Using userId:', targetUserId, 'userName:', userName);
 
       // Check for critical health metrics
-      const { data: recentHealthMetrics } = await supabase
+      const { data: recentHealthMetrics, error: healthMetricsError } = await supabase
         .from('health_metrics')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
         .limit(10);
+
+      if (healthMetricsError) {
+        console.error('Error fetching health metrics:', healthMetricsError);
+        // Continue with other checks even if health metrics fail
+      }
 
       recentHealthMetrics?.forEach(metric => {
         let severity: 'Low' | 'Medium' | 'High' | 'Critical' = 'Low';
@@ -411,8 +459,8 @@ export class AdminDashboardService {
 
         if (message) {
           alerts.push({
-            id: `${userId}_${metric.id}_${metric.metric_type}`,
-            userId,
+            id: `${targetUserId}_${metric.id}_${metric.metric_type}`,
+            userId: targetUserId,
             userName: userName.trim(),
             type: 'Health',
             message,
@@ -425,17 +473,22 @@ export class AdminDashboardService {
       });
 
       // Check for inactivity (no activities in last 2 days)
-      const { data: recentActivities } = await supabase
+      const { data: recentActivities, error: activitiesError } = await supabase
         .from('activities')
         .select('created_at')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .gte('created_at', yesterday.toISOString())
         .limit(1);
 
+      if (activitiesError) {
+        console.error('Error fetching activities:', activitiesError);
+        // Continue even if activities query fails
+      }
+
       if (!recentActivities || recentActivities.length === 0) {
         alerts.push({
-          id: `${userId}_inactivity_${today.toISOString().split('T')[0]}`,
-          userId,
+          id: `${targetUserId}_inactivity_${today.toISOString().split('T')[0]}`,
+          userId: targetUserId,
           userName: userName.trim(),
           type: 'Activity',
           message: 'No physical activity recorded for 2+ days',
@@ -485,7 +538,7 @@ export class AdminDashboardService {
       const { data: userActivities } = await supabase
         .from('activities')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: false });
 
@@ -493,14 +546,14 @@ export class AdminDashboardService {
       const { data: medications } = await supabase
         .from('medications')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .eq('is_active', true);
 
       // Get health metrics for this user
       const { data: healthMetrics } = await supabase
         .from('health_metrics')
         .select('created_at')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .gte('created_at', startDate.toISOString());
 
       const activities: DailyActivity[] = [];
@@ -547,8 +600,8 @@ export class AdminDashboardService {
         );
 
         activities.push({
-          id: `${userId}_${date}`,
-          userId,
+          id: `${targetUserId}_${date}`,
+          userId: targetUserId,
           userName: userName.trim(),
           date,
           walkingMinutes: Math.round(walkingMinutes),
@@ -590,14 +643,11 @@ export class AdminDashboardService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      const userId = user.id;
-      const userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
-
       // Get last activity for this user
       const { data: lastActivity } = await supabase
         .from('activities')
         .select('created_at')
-        .eq('user_id', userId)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -617,8 +667,8 @@ export class AdminDashboardService {
           }
 
           alerts.push({
-            id: `${userId}_inactivity_${daysInactive}`,
-            userId,
+            id: `${targetUserId}_inactivity_${daysInactive}`,
+            userId: targetUserId,
             userName: userName.trim(),
             daysInactive,
             lastActivityDate: lastActivityDate.toISOString(),
@@ -629,11 +679,11 @@ export class AdminDashboardService {
       } else {
         // No activities ever recorded
         alerts.push({
-          id: `${userId}_no_activity`,
-          userId,
+          id: `${targetUserId}_no_activity`,
+          userId: targetUserId,
           userName: userName.trim(),
           daysInactive: 999, // Very high number
-          lastActivityDate: user.created_at,
+          lastActivityDate: new Date().toISOString(), // Fallback if no activities
           alertLevel: 'Critical',
           isResolved: false,
         });

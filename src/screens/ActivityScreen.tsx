@@ -141,11 +141,13 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
-  // Load activities and stats on component mount
+  // Load activities and stats on component mount and when user.id changes
   useEffect(() => {
-    loadActivities();
-    loadStats();
-  }, []);
+    if (user?.id) {
+      loadActivities();
+      loadStats();
+    }
+  }, [user?.id]); // Reload when user.id changes (important for caregivers)
 
   // Keyboard visibility handling
   useEffect(() => {
@@ -188,11 +190,23 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
 
   const loadActivities = async () => {
     try {
-      const result = await ActivityService.getUserActivities(20);
+      // For caregivers, we need to get seniorUserId from props or user object
+      const targetUserId = user?.id || undefined;
+      console.log('ActivityScreen - loadActivities called with userId:', targetUserId);
+      const result = await ActivityService.getUserActivities(20, targetUserId);
+      console.log('ActivityScreen - loadActivities result:', { success: result.success, dataCount: result.data?.length, error: result.error });
       if (result.success && result.data) {
         setActivities(result.data);
+        console.log('ActivityScreen - Activities set to state:', result.data.length, 'items');
       } else {
         console.error('Failed to load activities:', result.error);
+        if (result.error?.includes('Access denied') || result.error?.includes('RLS')) {
+          Alert.alert(
+            'Access Denied',
+            'Please ensure RLS policies for caregiver access are set up in Supabase. See caregiver_rls_policies.sql',
+            [{ text: 'OK' }]
+          );
+        }
       }
     } catch (error) {
       console.error('Error loading activities:', error);
@@ -201,7 +215,9 @@ const ActivityScreen: React.FC<ActivityScreenProps> = ({
 
   const loadStats = async () => {
     try {
-      const result = await ActivityService.getUserActivityStats();
+      // For caregivers, we need to get seniorUserId from props or user object
+      const targetUserId = user?.id || undefined;
+      const result = await ActivityService.getUserActivityStats(targetUserId);
       if (result.success && result.data) {
         setStats(result.data);
       } else {

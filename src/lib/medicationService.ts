@@ -84,16 +84,32 @@ export class MedicationService {
       }
 
       console.log('getUserMedications - Querying medications for user_id:', targetUserId);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('getUserMedications - Current authenticated user:', currentUser?.id);
+      
       const { data, error } = await supabase
         .from('medications')
         .select('*')
         .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
       
-      console.log('getUserMedications - Query result:', { dataCount: data?.length, error });
+      console.log('getUserMedications - Query result:', { 
+        dataCount: data?.length, 
+        error: error?.message || error,
+        errorCode: error?.code,
+        errorDetails: error?.details,
+        errorHint: error?.hint
+      });
 
       if (error) {
         console.error('Error fetching medications:', error);
+        // Check if it's an RLS policy error
+        if (error.code === '42501' || error.message?.includes('permission denied') || error.message?.includes('policy')) {
+          return { 
+            success: false, 
+            error: 'Access denied. Please ensure RLS policies for caregiver access are set up in Supabase. See caregiver_rls_policies.sql' 
+          };
+        }
         return { success: false, error: error.message };
       }
 
@@ -106,20 +122,29 @@ export class MedicationService {
 
   /**
    * Get today's medication schedule
+   * @param userId - Optional: user ID to fetch schedule for (for caregivers viewing senior's data)
    */
-  static async getTodaySchedule(): Promise<{ success: boolean; data?: MedicationScheduleItem[]; error?: string }> {
+  static async getTodaySchedule(userId?: string): Promise<{ success: boolean; data?: MedicationScheduleItem[]; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getTodaySchedule - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getTodaySchedule - Using authenticated user id:', targetUserId);
       }
 
       // Get all active medications for the user
       const { data: medications, error } = await supabase
         .from('medications')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('is_active', true);
 
       if (error) {
@@ -139,7 +164,7 @@ export class MedicationService {
       const { data: prnUsage, error: usageError } = await supabase
         .from('medication_usage')
         .select('medication_id, taken_at')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .gte('taken_at', startOfDay.toISOString())
         .lt('taken_at', endOfDay.toISOString());
 
@@ -221,20 +246,29 @@ export class MedicationService {
 
   /**
    * Get user's medication statistics
+   * @param userId - Optional: user ID to fetch stats for (for caregivers viewing senior's data)
    */
-  static async getMedicationStats(): Promise<{ success: boolean; data?: MedicationStats; error?: string }> {
+  static async getMedicationStats(userId?: string): Promise<{ success: boolean; data?: MedicationStats; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getMedicationStats - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getMedicationStats - Using authenticated user id:', targetUserId);
       }
 
       // Get all medications
       const { data: medications, error } = await supabase
         .from('medications')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', targetUserId);
 
       if (error) {
         console.error('Error fetching medication stats:', error);
@@ -274,7 +308,7 @@ export class MedicationService {
       const { data: prnUsage, error: usageError } = await supabase
         .from('medication_usage')
         .select('medication_id')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .gte('taken_at', startOfDay.toISOString())
         .lt('taken_at', endOfDay.toISOString());
 
@@ -285,7 +319,7 @@ export class MedicationService {
       const prnUsedToday = prnUsage?.length || 0;
 
       // Get today's schedule to calculate overdue and due now
-      const scheduleResult = await this.getTodaySchedule();
+      const scheduleResult = await this.getTodaySchedule(targetUserId);
       const scheduleItems = scheduleResult.data || [];
       
       const overdueMedications = scheduleItems.filter(item => item.status === 'overdue').length;

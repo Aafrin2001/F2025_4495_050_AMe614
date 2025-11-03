@@ -95,7 +95,7 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user, userI
       keyboardDidHideListener.remove();
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, userId]); // Add userId to dependencies so data reloads when it changes
 
   const loadData = async () => {
     setLoading(true);
@@ -105,16 +105,21 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user, userI
 
   const loadMedications = async () => {
     const targetUserId = userId || undefined;
+    console.log('MedicationScreen - loadMedications called with userId:', targetUserId);
     const { success, data, error } = await MedicationService.getUserMedications(targetUserId);
+    console.log('MedicationScreen - loadMedications result:', { success, dataCount: data?.length, error });
     if (success && data) {
       setMedications(data);
+      console.log('MedicationScreen - Medications set to state:', data.length, 'items');
     } else {
+      console.error('MedicationScreen - Failed to load medications:', error);
       Alert.alert('Error', error || 'Failed to load medications');
     }
   };
 
   const loadStats = async () => {
-    const { success, data, error } = await MedicationService.getMedicationStats();
+    const targetUserId = userId || undefined;
+    const { success, data, error } = await MedicationService.getMedicationStats(targetUserId);
     if (success && data) {
       setStats(data);
     } else {
@@ -123,7 +128,8 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user, userI
   };
 
   const loadTodaySchedule = async () => {
-    const { success, data, error } = await MedicationService.getTodaySchedule();
+    const targetUserId = userId || undefined;
+    const { success, data, error } = await MedicationService.getTodaySchedule(targetUserId);
     if (success && data) {
       setTodaySchedule(data);
     } else {
@@ -960,11 +966,21 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user, userI
           {/* All Medications */}
           <View style={styles.medicationsContainer}>
             <Text style={styles.sectionTitle}>All Medications</Text>
-            {medications.length === 0 ? (
+            {loading ? (
+              <View style={styles.emptyMedications}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={styles.emptyMedicationsText}>Loading medications...</Text>
+              </View>
+            ) : medications.length === 0 ? (
               <View style={styles.emptyMedications}>
                 <Ionicons name="medical-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
                 <Text style={styles.emptyMedicationsText}>No medications added yet</Text>
                 <Text style={styles.emptyMedicationsSubtext}>Add your first medication to get started</Text>
+                {userId && (
+                  <Text style={[styles.emptyMedicationsSubtext, { marginTop: 10, fontSize: 12, color: 'rgba(255, 255, 255, 0.5)' }]}>
+                    Viewing senior's medications
+                  </Text>
+                )}
               </View>
             ) : (
               medications.map(renderMedicationCard)

@@ -117,15 +117,32 @@ export const healthMetricsService = {
   },
 
   // Get latest metrics for a user
+  // Note: userId is required here since HealthMonitoringScreen passes it via user.id
   getLatestMetrics: async (userId: string): Promise<{ data: HealthMetricsSummary | null; error: any }> => {
     try {
+      console.log('getLatestMetrics - Querying health_metrics for user_id:', userId);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('getLatestMetrics - Current authenticated user:', currentUser?.id);
+      
       const { data, error } = await supabase
         .from('health_metrics')
         .select('*')
         .eq('user_id', userId)
         .order('recorded_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('getLatestMetrics - Error:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        // Check if it's an RLS policy error
+        if (error.code === '42501' || error.message?.includes('permission denied') || error.message?.includes('policy')) {
+          throw new Error('Access denied. Please ensure RLS policies for caregiver access are set up in Supabase. See caregiver_rls_policies.sql');
+        }
+        throw error;
+      }
 
       // Group metrics by type and get the latest for each
       const summary: HealthMetricsSummary = {

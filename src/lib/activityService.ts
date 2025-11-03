@@ -137,24 +137,50 @@ export class ActivityService {
 
   /**
    * Get user's activities from Supabase
+   * @param userId - Optional: user ID to fetch activities for (for caregivers viewing senior's data)
+   * @param limit - Maximum number of activities to return
    */
-  static async getUserActivities(limit: number = 50): Promise<{ success: boolean; data?: Activity[]; error?: string }> {
+  static async getUserActivities(limit: number = 50, userId?: string): Promise<{ success: boolean; data?: Activity[]; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getUserActivities - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getUserActivities - Using authenticated user id:', targetUserId);
       }
 
+      console.log('getUserActivities - Querying activities for user_id:', targetUserId);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('getUserActivities - Current authenticated user:', currentUser?.id);
+      
       const { data, error } = await supabase
         .from('activities')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching activities:', error);
+        console.error('Error fetching activities:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        // Check if it's an RLS policy error
+        if (error.code === '42501' || error.message?.includes('permission denied') || error.message?.includes('policy')) {
+          return { 
+            success: false, 
+            error: 'Access denied. Please ensure RLS policies for caregiver access are set up in Supabase. See caregiver_rls_policies.sql' 
+          };
+        }
         return { success: false, error: error.message };
       }
 
@@ -167,20 +193,29 @@ export class ActivityService {
 
   /**
    * Get user's activity statistics
+   * @param userId - Optional: user ID to fetch stats for (for caregivers viewing senior's data)
    */
-  static async getUserActivityStats(): Promise<{ success: boolean; data?: ActivityStats; error?: string }> {
+  static async getUserActivityStats(userId?: string): Promise<{ success: boolean; data?: ActivityStats; error?: string }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      if (userId) {
+        targetUserId = userId;
+        console.log('getUserActivityStats - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        console.log('getUserActivityStats - Using authenticated user id:', targetUserId);
       }
 
       // Get all activities
       const { data: activities, error } = await supabase
         .from('activities')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', targetUserId);
 
       if (error) {
         console.error('Error fetching activity stats:', error);

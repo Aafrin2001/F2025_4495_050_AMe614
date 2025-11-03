@@ -383,10 +383,14 @@ export default function App() {
       case 'voiceChat':
         return <VoiceChatScreen onBack={handleBackToChatSelection} />;
       case 'activities':
+        // For caregivers, pass seniorUserId in user.id so activities load senior's data
+        const activitiesUserId = user?.userType === 'offer' && user?.seniorUserId 
+          ? user.seniorUserId 
+          : user?.id;
         return (
           <ActivityScreen 
-            onBack={handleBackToMain} 
-            user={user}
+            onBack={user?.userType === 'offer' ? () => setCurrentScreen('caregiverDashboard') : handleBackToMain}
+            user={{ ...user, id: activitiesUserId } as User}
             onNavigateToWalking={handleNavigateToWalking}
             onNavigateToStretching={handleNavigateToStretching}
             onNavigateToBreathing={handleNavigateToBreathing}

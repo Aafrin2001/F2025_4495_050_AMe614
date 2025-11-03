@@ -197,7 +197,12 @@ export default function App() {
   };
 
   const handleBackToMain = () => {
-    setCurrentScreen('main');
+    // Caregivers should never see the main screen - always go to caregiver dashboard
+    if (user?.userType === 'offer') {
+      setCurrentScreen('caregiverDashboard');
+    } else {
+      setCurrentScreen('main');
+    }
   };
 
   const handleBackToChatSelection = () => {
@@ -266,6 +271,25 @@ export default function App() {
           case 'auth':
             return <AuthScreen onLogin={handleAuthSuccess} />;
       case 'main':
+        // If a caregiver tries to access main screen, redirect to caregiver dashboard
+        if (user?.userType === 'offer') {
+          return (
+            <CaregiverDashboardScreen
+              caregiver={user}
+              seniorUserId={user.seniorUserId || ''}
+              onBack={() => {}} // No back button for caregivers from dashboard
+              onViewAlerts={() => setCurrentScreen('adminDashboard')}
+              onViewDashboard={() => setCurrentScreen('adminDashboard')}
+              onViewMedication={() => setCurrentScreen('medication')}
+              onViewMonitor={() => setCurrentScreen('healthMonitoring')}
+              onLogout={handleLogout}
+              onSeniorAdded={async (seniorEmail: string, seniorUserId?: string) => {
+                const updatedUser = { ...user, seniorEmail, seniorUserId };
+                setUser(updatedUser);
+              }}
+            />
+          );
+        }
         return (
           <MainScreen
             user={user}
@@ -280,6 +304,21 @@ export default function App() {
           />
         );
       case 'caregiverApproval':
+        // Only seniors can approve caregivers, but redirect caregivers if they somehow get here
+        if (user?.userType === 'offer') {
+          return (
+            <CaregiverDashboardScreen
+              caregiver={user}
+              seniorUserId={user.seniorUserId || ''}
+              onBack={() => {}}
+              onViewAlerts={() => setCurrentScreen('adminDashboard')}
+              onViewDashboard={() => setCurrentScreen('adminDashboard')}
+              onViewMedication={() => setCurrentScreen('medication')}
+              onViewMonitor={() => setCurrentScreen('healthMonitoring')}
+              onLogout={handleLogout}
+            />
+          );
+        }
         return (
           <CaregiverApprovalScreen
             onBack={handleBackToMain}
@@ -324,7 +363,7 @@ export default function App() {
             <CaregiverDashboardScreen
               caregiver={user}
               seniorUserId={''} // Will be handled in the component
-              onBack={handleBackToMain}
+              onBack={() => {}} // No back button - caregivers stay on dashboard
               onViewAlerts={() => {
                 Alert.alert('Pending Approval', 'Please wait for senior approval before accessing alerts.');
               }}
@@ -347,7 +386,7 @@ export default function App() {
           <CaregiverDashboardScreen
             caregiver={user}
             seniorUserId={user.seniorUserId || ''}
-            onBack={handleBackToMain}
+            onBack={() => {}} // No back button - caregivers stay on dashboard
             onViewAlerts={() => setCurrentScreen('adminDashboard')}
             onViewDashboard={() => setCurrentScreen('adminDashboard')}
             onViewMedication={() => setCurrentScreen('medication')}
@@ -442,7 +481,14 @@ export default function App() {
           />
         );
       case 'settings':
-        return <SettingsScreen onBack={handleBackToMain} />;
+        return (
+          <SettingsScreen 
+            onBack={user?.userType === 'offer' 
+              ? () => setCurrentScreen('caregiverDashboard') 
+              : handleBackToMain
+            } 
+          />
+        );
       default:
         return <SplashScreen onFinish={handleSplashFinish} />;
     }

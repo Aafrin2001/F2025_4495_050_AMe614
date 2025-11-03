@@ -237,9 +237,8 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        {/* No back button for caregivers - they stay on dashboard */}
+        <View style={styles.backButton} />
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Caregiver Dashboard</Text>
           <Text style={styles.headerSubtitle}>

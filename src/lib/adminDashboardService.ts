@@ -517,22 +517,34 @@ export class AdminDashboardService {
 
   /**
    * Get daily activities for current user
+   * @param timeframe - Time period for activities (7d, 30d, 90d)
+   * @param userId - Optional: user ID to fetch activities for (for caregivers viewing senior's data)
    */
-  static async getDailyActivities(timeframe: '7d' | '30d' | '90d'): Promise<{ success: boolean; data?: DailyActivity[]; error?: string }> {
+  static async getDailyActivities(timeframe: '7d' | '30d' | '90d', userId?: string): Promise<{ success: boolean; data?: DailyActivity[]; error?: string }> {
     try {
       const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('Error fetching current user:', userError);
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      let userName: string;
+      
+      if (userId) {
+        targetUserId = userId;
+        // For caregivers, we don't have the senior's name in metadata, use a generic name
+        userName = 'User';
+        console.log('getDailyActivities - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Error fetching current user:', userError);
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
+        console.log('getDailyActivities - Using authenticated user id:', targetUserId);
       }
-
-      const userId = user.id;
-      const userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
 
       // Get activities for this user
       const { data: userActivities } = await supabase
@@ -628,19 +640,32 @@ export class AdminDashboardService {
 
   /**
    * Get inactivity alerts for current user
+   * @param userId - Optional: user ID to fetch alerts for (for caregivers viewing senior's data)
    */
-  static async getInactivityAlerts(): Promise<{ success: boolean; data?: InactivityAlert[]; error?: string }> {
+  static async getInactivityAlerts(userId?: string): Promise<{ success: boolean; data?: InactivityAlert[]; error?: string }> {
     try {
       const alerts: InactivityAlert[] = [];
       const today = new Date();
       const twoDaysAgo = new Date(today);
       twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        console.error('Error fetching current user:', userError);
-        return { success: false, error: 'User not authenticated' };
+      // Get user ID - use provided userId or get from auth
+      let targetUserId: string;
+      let userName: string;
+      
+      if (userId) {
+        targetUserId = userId;
+        userName = 'User';
+        console.log('getInactivityAlerts - Using provided userId:', targetUserId);
+      } else {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.error('Error fetching current user:', userError);
+          return { success: false, error: 'User not authenticated' };
+        }
+        targetUserId = user.id;
+        userName = `${user.user_metadata?.firstName || 'User'} ${user.user_metadata?.lastName || ''}`;
+        console.log('getInactivityAlerts - Using authenticated user id:', targetUserId);
       }
 
       // Get last activity for this user

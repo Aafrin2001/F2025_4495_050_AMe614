@@ -92,12 +92,18 @@ export const healthMetricsService = {
         return { data: null, error: { message: validation.error } };
       }
 
+      // For blood pressure, use systolic as the value field (required by database)
+      // For other metrics, use the provided value
+      const metricValue = input.metric_type === 'blood_pressure' 
+        ? (input.systolic || 0) 
+        : input.value;
+
       const metricData = {
         user_id: userId,
         metric_type: input.metric_type,
         systolic: input.systolic,
         diastolic: input.diastolic,
-        value: input.value,
+        value: metricValue,
         unit: input.unit,
         notes: input.notes,
         recorded_at: new Date().toISOString(),

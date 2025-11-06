@@ -1,0 +1,173 @@
+.schedule-container,
+.chat-selection-container,
+.ai-chat-container,
+.voice-chat-container,
+.activities-container,
+.walking-container,
+.stretching-container,
+.breathing-container,
+.sleep-container,
+.memory-container,
+.wordsearch-container,
+.puzzle-container,
+.number-container,
+.admin-container {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-header,
+.chat-selection-header,
+.ai-chat-header,
+.voice-chat-header,
+.activities-header,
+.walking-header,
+.stretching-header,
+.breathing-header,
+.sleep-header,
+.memory-header,
+.wordsearch-header,
+.puzzle-header,
+.number-header,
+.admin-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20px;
+  padding-top: 60px;
+}
+
+.schedule-back-button,
+.chat-selection-back-button,
+.ai-chat-back-button,
+.voice-chat-back-button,
+.activities-back-button,
+.walking-back-button,
+.stretching-back-button,
+.breathing-back-button,
+.sleep-back-button,
+.memory-back-button,
+.wordsearch-back-button,
+.puzzle-back-button,
+.number-back-button,
+.admin-back-button {
+  margin-right: 10px;
+  padding: 5px;
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+}
+
+.schedule-header-title,
+.chat-selection-header-title,
+.ai-chat-header-title,
+.voice-chat-header-title,
+.activities-header-title,
+.walking-header-title,
+.stretching-header-title,
+.breathing-header-title,
+.sleep-header-title,
+.memory-header-title,
+.wordsearch-header-title,
+.puzzle-header-title,
+.number-header-title,
+.admin-header-title {
+  font-weight: bold;
+  color: #FFFFFF;
+  flex: 1;
+  text-align: center;
+  font-size: 24px;
+}
+
+.schedule-header-spacer,
+.chat-selection-header-spacer,
+.ai-chat-header-spacer,
+.voice-chat-header-spacer,
+.activities-header-spacer,
+.walking-header-spacer,
+.stretching-header-spacer,
+.breathing-header-spacer,
+.sleep-header-spacer,
+.memory-header-spacer,
+.wordsearch-header-spacer,
+.puzzle-header-spacer,
+.number-header-spacer,
+.admin-header-spacer {
+  width: 34px;
+}
+
+.schedule-content,
+.chat-selection-content,
+.ai-chat-content,
+.voice-chat-content,
+.activities-content,
+.walking-content,
+.stretching-content,
+.breathing-content,
+.sleep-content,
+.memory-content,
+.wordsearch-content,
+.puzzle-content,
+.number-content,
+.admin-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.schedule-placeholder,
+.chat-selection-placeholder,
+.ai-chat-placeholder,
+.voice-chat-placeholder,
+.activities-placeholder,
+.walking-placeholder,
+.stretching-placeholder,
+.breathing-placeholder,
+.sleep-placeholder,
+.memory-placeholder,
+.wordsearch-placeholder,
+.puzzle-placeholder,
+.number-placeholder,
+.admin-placeholder {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 18px;
+}
+
+.chat-selection-content {
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chat-selection-option {
+  width: 100%;
+  max-width: 300px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  border: none;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.chat-selection-option:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.chat-selection-option-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+

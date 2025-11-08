@@ -119,9 +119,31 @@ export class CaregiverService {
 
   /**
    * Reject a caregiver request (called by senior)
+   * Uses a database function to bypass RLS issues
    */
   static async rejectRequest(relationshipId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // First, verify the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Try using the database function first (bypasses RLS)
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('reject_caregiver_request', { relationship_id: relationshipId });
+
+      if (!functionError && functionResult) {
+        return { success: true };
+      }
+
+      // If function doesn't exist or fails, fall back to direct update
+      if (functionError && functionError.code !== '42883') { // 42883 = function doesn't exist
+        console.error('Function error:', functionError);
+        // Continue to fallback
+      }
+
+      // Fallback: Direct update (will use RLS policy)
       const { error } = await supabase
         .from('caregiver_relationships')
         .update({
@@ -131,11 +153,16 @@ export class CaregiverService {
         .eq('id', relationshipId);
 
       if (error) {
-        return { success: false, error: error.message };
+        console.error('Error rejecting relationship:', error);
+        return { 
+          success: false, 
+          error: error.message || 'Failed to reject request. Please run the SQL fix in Supabase.' 
+        };
       }
 
       return { success: true };
     } catch (error: any) {
+      console.error('Error in rejectRequest:', error);
       return { success: false, error: error.message || 'Error rejecting request' };
     }
   }

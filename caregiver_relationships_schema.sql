@@ -69,10 +69,11 @@ CREATE POLICY "Seniors can update relationships for them" ON caregiver_relations
     (status = 'pending' AND LOWER(get_user_email()) = LOWER(senior_email))
   )
   WITH CHECK (
-    -- Same condition
+    -- Allow if senior_id matches (already approved relationships)
     senior_id = auth.uid()
     OR
-    (status = 'pending' AND LOWER(get_user_email()) = LOWER(senior_email))
+    -- Or if email matches and new status is approved or rejected (updating from pending)
+    (LOWER(get_user_email()) = LOWER(senior_email) AND status IN ('approved', 'rejected'))
   );
 
 -- Create a function to notify seniors of new caregiver requests

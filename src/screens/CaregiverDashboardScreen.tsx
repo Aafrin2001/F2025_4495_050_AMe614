@@ -29,7 +29,19 @@ interface CaregiverDashboardScreenProps {
   onViewMedication: () => void;
   onViewMonitor: () => void;
   onLogout: () => void;
+  onSettingsPress?: () => void;
   onSeniorAdded?: (seniorEmail: string, seniorUserId?: string) => void;
+}
+
+interface ClientInfo {
+  id: string;
+  email: string;
+  name: string;
+  status: 'approved' | 'pending' | 'rejected';
+  seniorId?: string;
+  relationshipId: string;
+  requestedAt: string;
+  approvedAt?: string;
 }
 
 const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
@@ -41,46 +53,81 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
   onViewMedication,
   onViewMonitor,
   onLogout,
+  onSettingsPress,
   onSeniorAdded,
 }) => {
-  const [showAddSeniorModal, setShowAddSeniorModal] = useState(!caregiver.seniorEmail);
-  const [seniorEmail, setSeniorEmail] = useState(caregiver.seniorEmail || '');
+  const [showAddSeniorModal, setShowAddSeniorModal] = useState(false);
+  const [seniorEmail, setSeniorEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [actualSeniorUserId, setActualSeniorUserId] = useState<string>(seniorUserId);
-  const [showRejectionNotification, setShowRejectionNotification] = useState(false);
-  const [rejectedSeniorEmail, setRejectedSeniorEmail] = useState<string>('');
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationType, setNotificationType] = useState<'approved' | 'rejected'>('rejected');
+  const [notificationSeniorEmail, setNotificationSeniorEmail] = useState<string>('');
+  const [clients, setClients] = useState<ClientInfo[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
 
-  // Reload relationship when component mounts to ensure we have the latest data
+  // Load all client relationships
   useEffect(() => {
-    const loadRelationship = async () => {
+    const loadClients = async () => {
       if (!caregiver.id) return;
       
+      setLoadingClients(true);
       try {
-        const relationship = await CaregiverService.getSeniorUserId(caregiver.id);
-        if (relationship.success && relationship.seniorUserId) {
-          console.log('Loaded relationship:', relationship);
-          setActualSeniorUserId(relationship.seniorUserId);
-          if (onSeniorAdded) {
-            onSeniorAdded(relationship.seniorEmail || '', relationship.seniorUserId);
+        const { success, data: relationships } = await CaregiverService.getCaregiverRelationships(caregiver.id);
+        
+        if (success && relationships) {
+          // Convert relationships to client info
+          const clientsData: ClientInfo[] = relationships.map(rel => {
+            // Extract name from email (fallback if we can't get actual name)
+            const emailParts = rel.senior_email.split('@');
+            const nameFromEmail = emailParts[0].split('.')
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ');
+            
+            return {
+              id: rel.id,
+              email: rel.senior_email,
+              name: nameFromEmail, // Will try to get actual name from user metadata if available
+              status: rel.status as 'approved' | 'pending' | 'rejected',
+              seniorId: rel.senior_id || undefined,
+              relationshipId: rel.id,
+              requestedAt: rel.requested_at,
+              approvedAt: rel.approved_at || undefined,
+            };
+          });
+
+          // Note: We use email-based names since we can't access admin API from client
+          // In production, you could create a profiles table or use a serverless function
+
+          setClients(clientsData);
+          
+          // Set the primary seniorUserId if there's an approved relationship
+          const approvedClient = clientsData.find(c => c.status === 'approved');
+          if (approvedClient && approvedClient.seniorId) {
+            setActualSeniorUserId(approvedClient.seniorId);
+            if (onSeniorAdded) {
+              onSeniorAdded(approvedClient.email, approvedClient.seniorId);
+            }
+          } else {
+            setActualSeniorUserId('');
           }
-        } else {
-          console.log('No approved relationship found:', relationship.error);
-          setActualSeniorUserId('');
+
+          // Count pending requests for notification badge
+          const pendingCount = clientsData.filter(c => c.status === 'pending').length;
+          setNotificationCount(pendingCount);
         }
       } catch (error) {
-        console.error('Error loading relationship:', error);
+        console.error('Error loading clients:', error);
+      } finally {
+        setLoadingClients(false);
       }
     };
 
-    // Only load if we don't have a seniorUserId yet
-    if (!seniorUserId && caregiver.userType === 'offer') {
-      loadRelationship();
-    } else {
-      setActualSeniorUserId(seniorUserId);
-    }
+    loadClients();
   }, [caregiver.id, seniorUserId]);
 
-  // Listen for caregiver request rejections via Supabase Realtime
+  // Listen for caregiver request status changes (approved/rejected) via Supabase Realtime
   useEffect(() => {
     if (!caregiver.id) return;
 
@@ -88,7 +135,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
 
     // Subscribe to changes in caregiver_relationships table
     const channel = supabase
-      .channel('caregiver-rejections')
+      .channel('caregiver-request-status')
       .on(
         'postgres_changes',
         {
@@ -100,17 +147,101 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
         (payload) => {
           console.log('Realtime update received:', payload);
           
-          // Check if status changed to 'rejected'
+          // Check if status changed to 'rejected' or 'approved'
           const newStatus = payload.new?.status;
           const oldStatus = payload.old?.status;
           
-          if (newStatus === 'rejected' && oldStatus !== 'rejected') {
+          // Only show notification if status actually changed
+          if (newStatus !== oldStatus) {
             const seniorEmail = payload.new?.senior_email || 'the senior';
-            console.log('Request rejected by:', seniorEmail);
             
-            // Show notification
-            setRejectedSeniorEmail(seniorEmail);
-            setShowRejectionNotification(true);
+            if (newStatus === 'rejected' && oldStatus !== 'rejected') {
+              console.log('Request rejected by:', seniorEmail);
+              setNotificationType('rejected');
+              setNotificationSeniorEmail(seniorEmail);
+              setShowNotification(true);
+              
+              // Reload clients to update UI
+              const reloadClients = async () => {
+                const { success, data: relationships } = await CaregiverService.getCaregiverRelationships(caregiver.id);
+                if (success && relationships) {
+                  const clientsData: ClientInfo[] = relationships.map(rel => {
+                    const emailParts = rel.senior_email.split('@');
+                    const nameFromEmail = emailParts[0].split('.')
+                      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                      .join(' ');
+                    
+                    return {
+                      id: rel.id,
+                      email: rel.senior_email,
+                      name: nameFromEmail,
+                      status: rel.status as 'approved' | 'pending' | 'rejected',
+                      seniorId: rel.senior_id || undefined,
+                      relationshipId: rel.id,
+                      requestedAt: rel.requested_at,
+                      approvedAt: rel.approved_at || undefined,
+                    };
+                  });
+                  setClients(clientsData);
+                  
+                  const approvedClient = clientsData.find(c => c.status === 'approved' && c.seniorId);
+                  if (approvedClient && approvedClient.seniorId) {
+                    setActualSeniorUserId(approvedClient.seniorId);
+                    if (onSeniorAdded) {
+                      onSeniorAdded(approvedClient.email, approvedClient.seniorId);
+                    }
+                  } else {
+                    setActualSeniorUserId('');
+                  }
+                  
+                  const pendingCount = clientsData.filter(c => c.status === 'pending').length;
+                  setNotificationCount(pendingCount);
+                }
+              };
+              reloadClients();
+            } else if (newStatus === 'approved' && oldStatus !== 'approved') {
+              console.log('Request approved by:', seniorEmail);
+              setNotificationType('approved');
+              setNotificationSeniorEmail(seniorEmail);
+              setShowNotification(true);
+              
+              // Reload clients to update UI
+              const reloadClients = async () => {
+                const { success, data: relationships } = await CaregiverService.getCaregiverRelationships(caregiver.id);
+                if (success && relationships) {
+                  const clientsData: ClientInfo[] = relationships.map(rel => {
+                    const emailParts = rel.senior_email.split('@');
+                    const nameFromEmail = emailParts[0].split('.')
+                      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                      .join(' ');
+                    
+                    return {
+                      id: rel.id,
+                      email: rel.senior_email,
+                      name: nameFromEmail,
+                      status: rel.status as 'approved' | 'pending' | 'rejected',
+                      seniorId: rel.senior_id || undefined,
+                      relationshipId: rel.id,
+                      requestedAt: rel.requested_at,
+                      approvedAt: rel.approved_at || undefined,
+                    };
+                  });
+                  setClients(clientsData);
+                  
+                  const approvedClient = clientsData.find(c => c.status === 'approved' && c.seniorId);
+                  if (approvedClient && approvedClient.seniorId) {
+                    setActualSeniorUserId(approvedClient.seniorId);
+                    if (onSeniorAdded) {
+                      onSeniorAdded(approvedClient.email, approvedClient.seniorId);
+                    }
+                  }
+                  
+                  const pendingCount = clientsData.filter(c => c.status === 'pending').length;
+                  setNotificationCount(pendingCount);
+                }
+              };
+              reloadClients();
+            }
           }
         }
       )
@@ -158,6 +289,37 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
         return;
       }
 
+      // Reload clients list
+      const { success: reloadSuccess, data: relationships } = await CaregiverService.getCaregiverRelationships(user.id);
+      if (reloadSuccess && relationships) {
+        const clientsData: ClientInfo[] = relationships.map(rel => {
+          const emailParts = rel.senior_email.split('@');
+          const nameFromEmail = emailParts[0].split('.')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+          
+          return {
+            id: rel.id,
+            email: rel.senior_email,
+            name: nameFromEmail,
+            status: rel.status as 'approved' | 'pending' | 'rejected',
+            seniorId: rel.senior_id || undefined,
+            relationshipId: rel.id,
+            requestedAt: rel.requested_at,
+            approvedAt: rel.approved_at || undefined,
+          };
+        });
+        setClients(clientsData);
+        
+        const approvedClient = clientsData.find(c => c.status === 'approved' && c.seniorId);
+        if (approvedClient && approvedClient.seniorId) {
+          setActualSeniorUserId(approvedClient.seniorId);
+        }
+        
+        const pendingCount = clientsData.filter(c => c.status === 'pending').length;
+        setNotificationCount(pendingCount);
+      }
+
       // Verify if already approved
       const verifyResult = await CaregiverService.verifyAccess(
         user.id,
@@ -174,6 +336,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
               text: 'OK',
               onPress: () => {
                 setShowAddSeniorModal(false);
+                setSeniorEmail('');
                 if (onSeniorAdded) {
                   onSeniorAdded(verifyResult.relationship!.senior_email, verifyResult.relationship!.senior_id || undefined);
                 }
@@ -191,6 +354,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
               text: 'OK',
               onPress: () => {
                 setShowAddSeniorModal(false);
+                setSeniorEmail('');
                 if (onSeniorAdded) {
                   onSeniorAdded(seniorEmail.trim());
                 }
@@ -213,15 +377,123 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
   const handleSkip = () => {
     setShowAddSeniorModal(false);
   };
+
+  const handleClientPress = (client: ClientInfo) => {
+    if (client.status === 'approved' && client.seniorId) {
+      setActualSeniorUserId(client.seniorId);
+      if (onSeniorAdded) {
+        onSeniorAdded(client.email, client.seniorId);
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return '#4CAF50';
+      case 'pending': return '#FFA726';
+      case 'rejected': return '#F44336';
+      default: return '#9E9E9E';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'approved': return 'checkmark-circle';
+      case 'pending': return 'hourglass-outline';
+      case 'rejected': return 'close-circle';
+      default: return 'help-circle-outline';
+    }
+  };
+
+  const getCareLevel = (client: ClientInfo): string => {
+    // This would ideally come from a profile or assessment
+    // For now, we'll use a simple logic based on status
+    if (client.status === 'approved') {
+      return 'Active Care';
+    }
+    return 'Not Active';
+  };
+
+  const renderClientTile = (client: ClientInfo) => (
+    <TouchableOpacity
+      key={client.id}
+      style={styles.clientTile}
+      onPress={() => handleClientPress(client)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.clientTileHeader}>
+        <View style={styles.clientAvatarContainer}>
+          <View style={styles.clientAvatar}>
+            <Text style={styles.clientAvatarText}>
+              {client.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(client.status) }]} />
+        </View>
+        <View style={styles.clientInfo}>
+          <Text style={styles.clientName} numberOfLines={1}>
+            {client.name}
+          </Text>
+          <Text style={styles.clientEmail} numberOfLines={1}>
+            {client.email}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.clientTileBody}>
+        <View style={styles.clientDetailRow}>
+          <Ionicons name="medical-outline" size={16} color="rgba(255, 255, 255, 0.8)" />
+          <Text style={styles.clientDetailText}>{getCareLevel(client)}</Text>
+        </View>
+        {client.approvedAt && (
+          <View style={styles.clientDetailRow}>
+            <Ionicons name="calendar-outline" size={16} color="rgba(255, 255, 255, 0.8)" />
+            <Text style={styles.clientDetailText}>
+              Connected {new Date(client.approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.clientTileActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            if (client.seniorId) {
+              setActualSeniorUserId(client.seniorId);
+              onViewDashboard();
+            }
+          }}
+        >
+          <Ionicons name="analytics-outline" size={18} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>Dashboard</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            if (client.seniorId) {
+              setActualSeniorUserId(client.seniorId);
+              onViewMonitor();
+            }
+          }}
+        >
+          <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>Monitor</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       <StatusBar style="light" />
       
-      {/* Rejection Notification */}
+      {/* Request Status Notification (Approved/Rejected) */}
       <RejectionNotification
-        visible={showRejectionNotification}
-        seniorEmail={rejectedSeniorEmail}
-        onHide={() => setShowRejectionNotification(false)}
+        visible={showNotification}
+        type={notificationType}
+        seniorEmail={notificationSeniorEmail}
+        onHide={() => setShowNotification(false)}
         duration={4000}
       />
 
@@ -238,7 +510,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Connect to Senior Account</Text>
+              <Text style={styles.modalTitle}>Add New Client</Text>
               <TouchableOpacity onPress={handleSkip}>
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -246,7 +518,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
 
             <View style={styles.modalBody}>
               <Text style={styles.modalDescription}>
-                Enter the email address of the senior you are monitoring
+                Enter the email address of the senior you'd like to monitor
               </Text>
 
               <View style={styles.inputContainer}>
@@ -271,7 +543,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
                   onPress={handleSkip}
                   disabled={isLoading}
                 >
-                  <Text style={styles.skipButtonText}>Skip for Now</Text>
+                  <Text style={styles.skipButtonText}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -291,134 +563,163 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
         </KeyboardAvoidingView>
       </Modal>
       
-      {/* Header */}
+      {/* Professional Header */}
       <View style={styles.header}>
-        {/* No back button for caregivers - they stay on dashboard */}
-        <View style={styles.backButton} />
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Caregiver Dashboard</Text>
-          <Text style={styles.headerSubtitle}>
-            Monitoring: {caregiver.seniorEmail || 'Senior Account'}
+        <View style={styles.headerTop}>
+          <Text style={styles.dashboardTitle}>Caregiver Dashboard</Text>
+          <View style={styles.headerRight}>
+            {/* Notifications Bell */}
+            <TouchableOpacity 
+              style={styles.notificationButton}
+              onPress={() => {
+                const pendingClients = clients.filter(c => c.status === 'pending');
+                if (pendingClients.length > 0) {
+                  Alert.alert(
+                    'Pending Requests',
+                    `You have ${pendingClients.length} pending client request${pendingClients.length !== 1 ? 's' : ''} awaiting approval.`
+                  );
+                } else {
+                  Alert.alert('Notifications', 'No pending requests at this time.');
+                }
+              }}
+            >
+              <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+              {notificationCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Settings Button */}
+            {onSettingsPress && (
+              <TouchableOpacity 
+                style={styles.settingsButton}
+                onPress={onSettingsPress}
+              >
+                <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+
+            {/* Logout Button */}
+            <TouchableOpacity 
+              style={styles.logoutButton}
+              onPress={onLogout}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.headerBottom}>
+          <Text style={styles.welcomeText}>
+            Welcome, {caregiver.firstName || 'Caregiver'}
           </Text>
         </View>
-        <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Welcome Card */}
-        <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeTitle}>Welcome, {caregiver.firstName}!</Text>
-          {!actualSeniorUserId ? (
-            <View style={styles.pendingCard}>
-              <Ionicons name="hourglass-outline" size={32} color="#FFA726" style={styles.pendingIcon} />
-              <Text style={styles.pendingTitle}>
-                {caregiver.seniorEmail ? 'Access Pending Approval' : 'No Senior Connected'}
-              </Text>
-              {caregiver.seniorEmail ? (
-                <>
-                  <Text style={styles.pendingText}>
-                    Your request to monitor {caregiver.seniorEmail} is pending approval.
-                  </Text>
-                  <Text style={styles.pendingSubtext}>
-                    The senior will need to approve your access request before you can view their health information.
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.pendingText}>
-                    Connect to a senior account to start monitoring their health information.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.addSeniorButton}
-                    onPress={() => setShowAddSeniorModal(true)}
-                  >
-                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.addSeniorButtonText}>Add Senior</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+        {/* Clients Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>My Clients</Text>
+
+          {loadingClients ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={styles.loadingText}>Loading clients...</Text>
             </View>
-          ) : (
-            <Text style={styles.welcomeSubtitle}>
-              Monitor and manage the health and wellness of your loved one
-            </Text>
-          )}
+          ) : (() => {
+            const approvedClients = clients.filter(c => c.status === 'approved');
+            return approvedClients.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={64} color="rgba(255, 255, 255, 0.5)" />
+                <Text style={styles.emptyStateTitle}>No Clients Yet</Text>
+                <Text style={styles.emptyStateText}>
+                  Start by adding a client to monitor their health and wellness
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyStateButton}
+                  onPress={() => setShowAddSeniorModal(true)}
+                >
+                  <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.emptyStateButtonText}>Add Your First Client</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={styles.clientsGrid}>
+                  {approvedClients.map(renderClientTile)}
+                </View>
+                <TouchableOpacity
+                  style={styles.addClientButton}
+                  onPress={() => setShowAddSeniorModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="add-circle-outline" size={22} color="#FFFFFF" />
+                  <Text style={styles.addClientButtonText}>Add Client</Text>
+                </TouchableOpacity>
+              </>
+            );
+          })()}
         </View>
 
-        {/* Main Feature Cards - Only show if access approved */}
-        {seniorUserId ? (
-          <View style={styles.featureGrid}>
-          {/* Alerts Card */}
-          <TouchableOpacity 
-            style={styles.featureCard}
-            onPress={onViewAlerts}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardIconContainer}>
-              <Ionicons name="alert-circle" size={40} color="#FFFFFF" />
-            </View>
-            <Text style={styles.featureTitle}>Alerts</Text>
-            <Text style={styles.featureDescription}>
-              View critical health alerts and emergency notifications
-            </Text>
-          </TouchableOpacity>
+        {/* Quick Actions - Only show if there's at least one approved client */}
+        {clients.some(c => c.status === 'approved') && actualSeniorUserId && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={onViewAlerts}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickActionIcon}>
+                  <Ionicons name="alert-circle" size={32} color="#F44336" />
+                </View>
+                <Text style={styles.quickActionTitle}>Alerts</Text>
+                <Text style={styles.quickActionSubtitle}>Critical notifications</Text>
+              </TouchableOpacity>
 
-          {/* Dashboard Card */}
-          <TouchableOpacity 
-            style={styles.featureCard}
-            onPress={onViewDashboard}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardIconContainer}>
-              <Ionicons name="analytics-outline" size={40} color="#FFFFFF" />
-            </View>
-            <Text style={styles.featureTitle}>Dashboard</Text>
-            <Text style={styles.featureDescription}>
-              Comprehensive health overview and analytics
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={onViewDashboard}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickActionIcon}>
+                  <Ionicons name="analytics-outline" size={32} color="#2196F3" />
+                </View>
+                <Text style={styles.quickActionTitle}>Dashboard</Text>
+                <Text style={styles.quickActionSubtitle}>Health overview</Text>
+              </TouchableOpacity>
 
-          {/* Medication Card */}
-          <TouchableOpacity 
-            style={styles.featureCard}
-            onPress={onViewMedication}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardIconContainer}>
-              <Ionicons name="medical-outline" size={40} color="#FFFFFF" />
-            </View>
-            <Text style={styles.featureTitle}>Medication</Text>
-            <Text style={styles.featureDescription}>
-              Manage medications, schedules, and reminders
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={onViewMedication}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickActionIcon}>
+                  <Ionicons name="medical-outline" size={32} color="#4CAF50" />
+                </View>
+                <Text style={styles.quickActionTitle}>Medications</Text>
+                <Text style={styles.quickActionSubtitle}>Manage schedules</Text>
+              </TouchableOpacity>
 
-          {/* Monitor Card */}
-          <TouchableOpacity 
-            style={styles.featureCard}
-            onPress={onViewMonitor}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardIconContainer}>
-              <Ionicons name="heart-outline" size={40} color="#FFFFFF" />
+              <TouchableOpacity 
+                style={styles.quickActionCard}
+                onPress={onViewMonitor}
+                activeOpacity={0.7}
+              >
+                <View style={styles.quickActionIcon}>
+                  <Ionicons name="heart-outline" size={32} color="#E91E63" />
+                </View>
+                <Text style={styles.quickActionTitle}>Monitor</Text>
+                <Text style={styles.quickActionSubtitle}>Vital signs</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.featureTitle}>Monitor</Text>
-            <Text style={styles.featureDescription}>
-              Track vital signs and health metrics
-            </Text>
-          </TouchableOpacity>
-        </View>
-        ) : (
-          <View style={styles.disabledMessage}>
-            <Ionicons name="lock-closed-outline" size={48} color="rgba(255, 255, 255, 0.5)" />
-            <Text style={styles.disabledText}>
-              Access to these features requires senior approval
-            </Text>
           </View>
         )}
       </ScrollView>
@@ -430,149 +731,309 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Header Styles
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 15,
+    paddingBottom: 20,
   },
-  backButton: {
-    marginRight: 15,
-    padding: 5,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  dashboardTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerBottom: {
+    marginTop: 4,
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+    letterSpacing: 0.3,
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#F44336',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#667eea',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  settingsButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   logoutButton: {
-    padding: 5,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
+  // Scroll Content
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 30,
   },
-  welcomeCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 25,
+  // Section Styles
+  section: {
     marginBottom: 30,
-    alignItems: 'center',
   },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 10,
-    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  featureGrid: {
-    gap: 20,
-  },
-  featureCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    padding: 25,
+  addClientButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 160,
     justifyContent: 'center',
-  },
-  cardIconContainer: {
-    marginBottom: 15,
-  },
-  featureTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  pendingCard: {
-    backgroundColor: 'rgba(255, 167, 38, 0.2)',
-    borderRadius: 15,
-    padding: 20,
-    marginTop: 15,
-    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 16,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 167, 38, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  pendingIcon: {
-    marginBottom: 10,
+  addClientButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
-  pendingTitle: {
-    fontSize: 18,
+  // Client Tile Styles
+  clientsGrid: {
+    gap: 16,
+    marginBottom: 20,
+  },
+  clientTile: {
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  clientTileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  clientAvatarContainer: {
+    position: 'relative',
+    marginRight: 14,
+  },
+  clientAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  clientAvatarText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statusIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: 'rgba(102, 126, 234, 1)',
+  },
+  clientInfo: {
+    flex: 1,
+  },
+  clientName: {
+    fontSize: 19,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
-  pendingText: {
+  clientEmail: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontWeight: '400',
+  },
+  clientTileBody: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  clientDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clientDetailText: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginBottom: 5,
+    fontWeight: '500',
+    marginLeft: 8,
   },
-  pendingSubtext: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    marginTop: 5,
+  clientTileActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  disabledMessage: {
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Loading & Empty States
+  loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
   },
-  disabledText: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    marginTop: 15,
   },
-  addSeniorButton: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 60,
     paddingHorizontal: 20,
-    marginTop: 15,
-    gap: 8,
   },
-  addSeniorButtonText: {
+  emptyStateTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  emptyStateButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
+  // Quick Actions
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickActionCard: {
+    width: '48%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  quickActionIcon: {
+    marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+  },
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     padding: 25,
@@ -598,6 +1059,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 20,
     textAlign: 'center',
+    lineHeight: 22,
   },
   inputContainer: {
     marginBottom: 20,

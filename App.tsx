@@ -283,6 +283,7 @@ export default function App() {
               onViewMedication={() => setCurrentScreen('medication')}
               onViewMonitor={() => setCurrentScreen('healthMonitoring')}
               onLogout={handleLogout}
+              onSettingsPress={handleSettingsPress}
               onSeniorAdded={async (seniorEmail: string, seniorUserId?: string) => {
                 const updatedUser = { ...user, seniorEmail, seniorUserId };
                 setUser(updatedUser);
@@ -316,6 +317,7 @@ export default function App() {
               onViewMedication={() => setCurrentScreen('medication')}
               onViewMonitor={() => setCurrentScreen('healthMonitoring')}
               onLogout={handleLogout}
+              onSettingsPress={handleSettingsPress}
             />
           );
         }
@@ -377,6 +379,7 @@ export default function App() {
                 Alert.alert('Pending Approval', 'Please wait for senior approval before accessing health monitoring.');
               }}
               onLogout={handleLogout}
+              onSettingsPress={handleSettingsPress}
               onSeniorAdded={handleSeniorAdded}
             />
           );
@@ -392,6 +395,7 @@ export default function App() {
             onViewMedication={() => setCurrentScreen('medication')}
             onViewMonitor={() => setCurrentScreen('healthMonitoring')}
             onLogout={handleLogout}
+            onSettingsPress={handleSettingsPress}
             onSeniorAdded={handleSeniorAdded}
           />
         );

@@ -8,8 +8,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+type NotificationType = 'approved' | 'rejected';
+
 interface RejectionNotificationProps {
   visible: boolean;
+  type: NotificationType;
   seniorEmail: string;
   onHide: () => void;
   duration?: number; // Duration in milliseconds
@@ -17,6 +20,7 @@ interface RejectionNotificationProps {
 
 const RejectionNotification: React.FC<RejectionNotificationProps> = ({
   visible,
+  type,
   seniorEmail,
   onHide,
   duration = 4000, // 4 seconds default
@@ -70,6 +74,14 @@ const RejectionNotification: React.FC<RejectionNotificationProps> = ({
 
   if (!visible) return null;
 
+  const isApproved = type === 'approved';
+  const backgroundColor = isApproved ? '#4CAF50' : '#F44336'; // Green for approved, Red for rejected
+  const iconName = isApproved ? 'checkmark-circle' : 'close-circle';
+  const title = isApproved ? 'Request Approved!' : 'Request Rejected';
+  const message = isApproved 
+    ? `${seniorEmail} has approved your caregiver request`
+    : `${seniorEmail} has rejected your caregiver request`;
+
   return (
     <Animated.View
       style={[
@@ -80,15 +92,13 @@ const RejectionNotification: React.FC<RejectionNotificationProps> = ({
         },
       ]}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, { backgroundColor }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name="close-circle" size={24} color="#FFFFFF" />
+          <Ionicons name={iconName} size={24} color="#FFFFFF" />
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Request Rejected</Text>
-          <Text style={styles.message}>
-            {seniorEmail} has rejected your caregiver request
-          </Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
         </View>
       </View>
     </Animated.View>
@@ -106,7 +116,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 10 : 0,
   },
   content: {
-    backgroundColor: '#F44336', // Red color for rejection
+    // backgroundColor is set dynamically based on type
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',

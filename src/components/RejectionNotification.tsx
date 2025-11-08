@@ -27,9 +27,26 @@ const RejectionNotification: React.FC<RejectionNotificationProps> = ({
 }) => {
   const slideAnim = useRef(new Animated.Value(-100)).current; // Start above screen
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasBeenVisibleRef = useRef(false);
 
   useEffect(() => {
+    console.log('📱 RejectionNotification useEffect:', { visible, type, seniorEmail, hasBeenVisible: hasBeenVisibleRef.current });
+    
     if (visible) {
+      hasBeenVisibleRef.current = true;
+      console.log('📱 Showing notification animation');
+      
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      // Reset animation values first
+      slideAnim.setValue(-100);
+      opacityAnim.setValue(0);
+      
       // Show animation
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -42,20 +59,46 @@ const RejectionNotification: React.FC<RejectionNotificationProps> = ({
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        console.log('📱 Notification animation completed');
+      });
 
       // Auto-hide after duration
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
+        console.log('📱 Auto-hiding notification after', duration, 'ms');
+        timerRef.current = null;
         hideNotification();
       }, duration);
 
-      return () => clearTimeout(timer);
-    } else {
+      return () => {
+        if (timerRef.current) {
+          console.log('📱 Cleaning up notification timer (early cleanup)');
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    } else if (hasBeenVisibleRef.current) {
+      // Only hide if we've been visible before (avoid hiding on initial mount)
+      // Also check if we have an active timer - if so, don't hide yet (let timer handle it)
+      if (timerRef.current) {
+        console.log('📱 visible=false but timer is still active, ignoring hide request');
+        return;
+      }
+      console.log('📱 Hiding notification (visible changed to false, no active timer)');
       hideNotification();
     }
+    // Only depend on visible and duration - don't re-run when type/email change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, duration]);
 
   const hideNotification = () => {
+    // Clear timer if it exists
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    console.log('📱 Starting hide animation');
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: -100,
@@ -68,6 +111,7 @@ const RejectionNotification: React.FC<RejectionNotificationProps> = ({
         useNativeDriver: true,
       }),
     ]).start(() => {
+      console.log('📱 Hide animation completed, calling onHide');
       onHide();
     });
   };

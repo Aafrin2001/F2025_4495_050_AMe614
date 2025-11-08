@@ -18,6 +18,7 @@ export class CaregiverService {
   /**
    * Request caregiver access to a senior account
    * Creates a pending relationship that requires senior approval
+   * If a rejected relationship exists, it will be updated to pending
    */
   static async requestAccess(
     seniorEmail: string, 
@@ -30,10 +31,146 @@ export class CaregiverService {
     error?: string 
   }> {
     try {
+      // First, check if a relationship already exists (pending, approved, or rejected)
+      const { data: existingRelationship, error: checkError } = await supabase
+        .from('caregiver_relationships')
+        .select('id, status')
+        .eq('caregiver_id', caregiverId)
+        .eq('senior_email', seniorEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 means no rows found, which is fine
+        console.error('Error checking existing relationship:', checkError);
+      }
+
       // Generate a verification code
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // Create a pending relationship request
+
+      // If a relationship exists
+      if (existingRelationship) {
+        // If it's already pending or approved, don't allow a new request
+        if (existingRelationship.status === 'pending') {
+          return {
+            success: false,
+            error: 'A request for this senior is already pending. Please wait for approval.'
+          };
+        }
+
+        if (existingRelationship.status === 'approved') {
+          return {
+            success: false,
+            error: 'You already have approved access to this senior account.'
+          };
+        }
+
+        // If it's rejected, update it to pending with a new verification code
+        if (existingRelationship.status === 'rejected') {
+          // Try to update - if RLS blocks it, we'll get an error
+          const { data, error } = await supabase
+            .from('caregiver_relationships')
+            .update({
+              status: 'pending',
+              verification_code: verificationCode,
+              requested_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              senior_id: null, // Clear senior_id if it was set
+              approved_at: null, // Clear approved_at
+            })
+            .eq('id', existingRelationship.id)
+            .eq('caregiver_id', caregiverId) // Ensure we're updating our own relationship
+            .select();
+
+          if (error) {
+            console.error('Error updating rejected relationship:', error);
+            // If RLS blocks the update, try using upsert instead
+            // Delete the old one and create a new one
+            const { error: deleteError } = await supabase
+              .from('caregiver_relationships')
+              .delete()
+              .eq('id', existingRelationship.id)
+              .eq('caregiver_id', caregiverId);
+
+            if (deleteError) {
+              return { 
+                success: false, 
+                error: 'Unable to resubmit request. Please contact support.' 
+              };
+            }
+
+            // Now insert a new one
+            const { data: newData, error: insertError } = await supabase
+              .from('caregiver_relationships')
+              .insert({
+                caregiver_id: caregiverId,
+                caregiver_email: caregiverEmail,
+                senior_email: seniorEmail.trim().toLowerCase(),
+                status: 'pending',
+                verification_code: verificationCode,
+                requested_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              return { success: false, error: insertError.message };
+            }
+
+            return {
+              success: true,
+              relationshipId: newData.id,
+              verificationCode
+            };
+          }
+
+          if (!data || data.length === 0) {
+            // Update didn't return any rows, try delete + insert approach
+            const { error: deleteError } = await supabase
+              .from('caregiver_relationships')
+              .delete()
+              .eq('id', existingRelationship.id)
+              .eq('caregiver_id', caregiverId);
+
+            if (deleteError) {
+              return { 
+                success: false, 
+                error: 'Unable to resubmit request. Please contact support.' 
+              };
+            }
+
+            const { data: newData, error: insertError } = await supabase
+              .from('caregiver_relationships')
+              .insert({
+                caregiver_id: caregiverId,
+                caregiver_email: caregiverEmail,
+                senior_email: seniorEmail.trim().toLowerCase(),
+                status: 'pending',
+                verification_code: verificationCode,
+                requested_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              return { success: false, error: insertError.message };
+            }
+
+            return {
+              success: true,
+              relationshipId: newData.id,
+              verificationCode
+            };
+          }
+
+          return {
+            success: true,
+            relationshipId: data[0]?.id || existingRelationship.id,
+            verificationCode
+          };
+        }
+      }
+
+      // No existing relationship, create a new one
       const { data, error } = await supabase
         .from('caregiver_relationships')
         .insert({
@@ -57,8 +194,43 @@ export class CaregiverService {
           };
         }
         
-        // Check if relationship already exists
+        // Check if relationship already exists (shouldn't happen now, but as fallback)
         if (error.code === '23505') {
+          // Try to update if it's rejected
+          const { data: existing } = await supabase
+            .from('caregiver_relationships')
+            .select('id, status')
+            .eq('caregiver_id', caregiverId)
+            .eq('senior_email', seniorEmail.trim().toLowerCase())
+            .maybeSingle();
+
+          if (existing && existing.status === 'rejected') {
+            // Update rejected to pending
+            const { data: updated, error: updateError } = await supabase
+              .from('caregiver_relationships')
+              .update({
+                status: 'pending',
+                verification_code: verificationCode,
+                requested_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                senior_id: null,
+                approved_at: null,
+              })
+              .eq('id', existing.id)
+              .select()
+              .single();
+
+            if (updateError) {
+              return { success: false, error: updateError.message };
+            }
+
+            return {
+              success: true,
+              relationshipId: updated.id,
+              verificationCode
+            };
+          }
+
           return {
             success: false,
             error: 'A request for this senior already exists. Please wait for approval or contact the senior directly.'
@@ -303,6 +475,117 @@ export class CaregiverService {
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message || 'Error updating relationship' };
+    }
+  }
+
+  /**
+   * Get all caregiver relationships (for admin/viewing purposes)
+   * @param status - Optional: filter by status ('pending', 'approved', 'rejected')
+   * @param userId - Optional: filter by caregiver_id or senior_id
+   */
+  static async getAllRelationships(
+    status?: 'pending' | 'approved' | 'rejected',
+    userId?: string
+  ): Promise<{ 
+    success: boolean; 
+    data?: CaregiverRelationship[]; 
+    error?: string 
+  }> {
+    try {
+      let query = supabase
+        .from('caregiver_relationships')
+        .select('*')
+        .order('requested_at', { ascending: false });
+
+      // Filter by status if provided
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      // Filter by user ID if provided (check both caregiver_id and senior_id)
+      if (userId) {
+        query = query.or(`caregiver_id.eq.${userId},senior_id.eq.${userId}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching relationships:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('Error fetching relationships:', error);
+      return { success: false, error: error.message || 'Error fetching relationships' };
+    }
+  }
+
+  /**
+   * Get relationships for a specific senior (by email or ID)
+   */
+  static async getSeniorRelationships(
+    seniorEmail?: string,
+    seniorId?: string
+  ): Promise<{ 
+    success: boolean; 
+    data?: CaregiverRelationship[]; 
+    error?: string 
+  }> {
+    try {
+      let query = supabase
+        .from('caregiver_relationships')
+        .select('*')
+        .order('requested_at', { ascending: false });
+
+      if (seniorId) {
+        query = query.eq('senior_id', seniorId);
+      } else if (seniorEmail) {
+        query = query.eq('senior_email', seniorEmail.toLowerCase().trim());
+      } else {
+        return { success: false, error: 'Either seniorEmail or seniorId must be provided' };
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching senior relationships:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('Error fetching senior relationships:', error);
+      return { success: false, error: error.message || 'Error fetching relationships' };
+    }
+  }
+
+  /**
+   * Get relationships for a specific caregiver
+   */
+  static async getCaregiverRelationships(
+    caregiverId: string
+  ): Promise<{ 
+    success: boolean; 
+    data?: CaregiverRelationship[]; 
+    error?: string 
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('caregiver_relationships')
+        .select('*')
+        .eq('caregiver_id', caregiverId)
+        .order('requested_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching caregiver relationships:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('Error fetching caregiver relationships:', error);
+      return { success: false, error: error.message || 'Error fetching relationships' };
     }
   }
 }

@@ -17,7 +17,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { User } from '../types';
 import { CaregiverService } from '../lib/caregiverService';
-import { auth } from '../lib/supabase';
+import { auth, supabase } from '../lib/supabase';
+import RejectionNotification from '../components/RejectionNotification';
 
 interface CaregiverDashboardScreenProps {
   caregiver: User;
@@ -46,6 +47,8 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
   const [seniorEmail, setSeniorEmail] = useState(caregiver.seniorEmail || '');
   const [isLoading, setIsLoading] = useState(false);
   const [actualSeniorUserId, setActualSeniorUserId] = useState<string>(seniorUserId);
+  const [showRejectionNotification, setShowRejectionNotification] = useState(false);
+  const [rejectedSeniorEmail, setRejectedSeniorEmail] = useState<string>('');
 
   // Reload relationship when component mounts to ensure we have the latest data
   useEffect(() => {
@@ -76,6 +79,51 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
       setActualSeniorUserId(seniorUserId);
     }
   }, [caregiver.id, seniorUserId]);
+
+  // Listen for caregiver request rejections via Supabase Realtime
+  useEffect(() => {
+    if (!caregiver.id) return;
+
+    console.log('Setting up Realtime subscription for caregiver:', caregiver.id);
+
+    // Subscribe to changes in caregiver_relationships table
+    const channel = supabase
+      .channel('caregiver-rejections')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'caregiver_relationships',
+          filter: `caregiver_id=eq.${caregiver.id}`,
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          
+          // Check if status changed to 'rejected'
+          const newStatus = payload.new?.status;
+          const oldStatus = payload.old?.status;
+          
+          if (newStatus === 'rejected' && oldStatus !== 'rejected') {
+            const seniorEmail = payload.new?.senior_email || 'the senior';
+            console.log('Request rejected by:', seniorEmail);
+            
+            // Show notification
+            setRejectedSeniorEmail(seniorEmail);
+            setShowRejectionNotification(true);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('Cleaning up Realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [caregiver.id]);
 
   const handleAddSenior = async () => {
     if (!seniorEmail.trim()) {
@@ -168,6 +216,14 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
   return (
     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
       <StatusBar style="light" />
+      
+      {/* Rejection Notification */}
+      <RejectionNotification
+        visible={showRejectionNotification}
+        seniorEmail={rejectedSeniorEmail}
+        onHide={() => setShowRejectionNotification(false)}
+        duration={4000}
+      />
 
       {/* Add Senior Modal */}
       <Modal

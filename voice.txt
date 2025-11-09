@@ -1,0 +1,100 @@
+HEALTH COMPANION - 15 MINUTE PRESENTATION SCRIPT
+
+[00:00-00:30] INTRODUCTION
+Good morning/afternoon everyone. Today I'm excited to present Health Companion, a comprehensive health management application designed to help seniors manage their health and enable caregivers to monitor their well-being. This project addresses a critical need in our aging population - providing accessible, user-friendly tools for health management.
+
+[00:30-01:30] PROBLEM STATEMENT
+As our population ages, managing health becomes increasingly complex. Seniors face challenges tracking medications, monitoring vital signs, scheduling appointments, and maintaining communication with family members and healthcare providers. Traditional healthcare apps are often too complex, difficult to navigate, or lack the features needed for comprehensive health management. Caregivers, whether family members or professionals, struggle to stay informed about their loved ones' health status in real-time.
+
+Health Companion solves these problems by providing an intuitive, accessible platform that combines medication management, health monitoring, activity tracking, and caregiver communication - all in one place.
+
+[01:30-03:30] CORE FEATURES - SENIOR PERSPECTIVE
+Let me walk you through the key features from the senior user's perspective.
+
+First, we have Medication Management. Users can add medications with detailed information including dosage, frequency, and special instructions. The app tracks daily medication schedules, sends reminders, and allows users to mark medications as taken. There's a special "Today's Schedule" view that shows all medications due for the current day, making it easy to stay on track. The system supports both daily medications with specific times and PRN - as-needed medications.
+
+Next is Health Monitoring. The app allows users to record vital signs including blood pressure, heart rate, body temperature, oxygen levels, weight, and blood sugar. What makes this unique is our grouped input system - related metrics like blood pressure and heart rate can be entered together, making the process faster and more intuitive. The system tracks trends over time and displays the last updated date for each metric.
+
+Activity Tracking is another key feature. Users can log various activities including walking, exercise, stairs climbing, and sleep. For sleep tracking, users can rate sleep quality. The app calculates calories burned and distance traveled based on activity type and duration. There's even a walking tracker that counts steps.
+
+We also have a Schedule Check feature that helps users manage important health-related appointments and tasks, categorized as doctor visits, medication checks, vitals monitoring, or exercise reminders.
+
+[03:30-05:00] CAREGIVER FEATURES
+One of the most innovative aspects of Health Companion is our caregiver functionality. Family members or professional caregivers can request access to monitor a senior's health information. The system includes a vetting process - caregivers must provide the senior's email address, and the senior must approve the connection using a verification code. This ensures security and privacy.
+
+Once approved, caregivers have access to a dedicated dashboard showing critical alerts, medication schedules, health metrics, and activity summaries for the senior they're monitoring. Caregivers can view the same data the senior sees, ensuring transparency and enabling better communication about health status. Importantly, caregivers can also edit information on behalf of the senior, which is helpful for seniors who may have difficulty using technology.
+
+The caregiver dashboard highlights critical health alerts prominently, making it easy to identify when immediate attention is needed. This real-time monitoring capability gives families peace of mind and enables proactive healthcare management.
+
+[05:00-06:30] TECHNICAL ARCHITECTURE
+Let me discuss the technical implementation. Health Companion is built using React Native for the mobile application, providing native performance on both iOS and Android platforms. We've also created a fully responsive web version using React with TypeScript, ensuring the application works seamlessly across all devices.
+
+The backend uses Supabase, which provides authentication, real-time database capabilities, and secure data storage. We've implemented Row Level Security policies to ensure that caregivers can only access data for seniors they're authorized to monitor, while seniors can only access their own data.
+
+The database schema includes tables for medications, health metrics, activities, scheduled checks, and caregiver relationships. The caregiver relationships table tracks the status of access requests - pending, approved, or rejected - maintaining a complete audit trail.
+
+For the AI chat functionality, we've integrated OpenAI's ChatGPT API, allowing users to ask health-related questions and receive personalized advice based on their health data.
+
+[06:30-08:00] USER INTERFACE & EXPERIENCE
+User experience was a primary focus in development. The application features a beautiful gradient design with purple and blue tones, creating a calming, professional appearance. All icons use line-style icons for a modern, clean look.
+
+The interface is designed with accessibility in mind. We've implemented font size controls, language selection, and high contrast mode options. The layout is intuitive - important information is prominently displayed, and navigation is straightforward with clear back buttons and logical screen flows.
+
+For medication scheduling, we've implemented a unique flow where users first create the medication, then set up the schedule in a separate full-screen view. This prevents the modal from being too cluttered and allows the native date and time pickers to work properly. The calendar picker uses native platform components, providing the best user experience on each device.
+
+We've also implemented a background activity tracking system. If a user starts tracking an activity and navigates to other screens, the activity continues tracking in the background. A card appears on the home screen showing the active activity with a stop button, ensuring users can easily manage ongoing activities.
+
+[08:00-09:30] ADMIN DASHBOARD & ALERTS
+The Admin Dashboard provides comprehensive health insights. It displays statistics including total medications, health metrics recorded, activities logged, and overdue items. The dashboard shows health trends and highlights critical alerts.
+
+Critical alerts are generated automatically based on health metric readings. For example, if blood pressure readings are outside normal ranges, if heart rate is too high or too low, or if temperature indicates fever, the system creates alerts with specific severity levels. These alerts are clickable, providing detailed information about the health issue, normal ranges, and actionable recommendations.
+
+The alert system is intelligent - it considers recent readings and trends, not just isolated values. This reduces false alarms while ensuring genuine health concerns are flagged immediately.
+
+[09:30-11:00] MOBILE & WEB VERSIONS
+We've developed both mobile and web versions of the application. The mobile app provides a native experience with platform-specific features like native date pickers and haptic feedback. The web version is fully responsive, adapting beautifully to desktop, tablet, and mobile screen sizes.
+
+The web version includes all the same features as the mobile app, with responsive design that ensures optimal viewing on any device. We've implemented comprehensive breakpoints for tablet and mobile views, ensuring buttons are appropriately sized for touch interaction, text is readable, and layouts flow naturally on smaller screens.
+
+Both versions share the same backend infrastructure, so data is synchronized across platforms. A user can log medication on their phone and view it immediately on the web, or vice versa.
+
+[11:00-12:30] DATA SECURITY & PRIVACY
+Security and privacy are param2ount in healthcare applications. We've implemented multiple layers of security:
+
+First, all authentication is handled through Supabase Auth, which provides secure password hashing and session management. Second, Row Level Security policies ensure that users can only access their own data, and caregivers can only access data for seniors who have explicitly approved their access.
+
+The caregiver relationship system includes a verification code mechanism, ensuring that only authorized individuals can connect to a senior's account. All data transfers use HTTPS encryption, and sensitive health information is stored securely in the database.
+
+We've also implemented proper error handling and logging, which helps identify and address security issues quickly while maintaining user privacy.
+
+[12:30-13:30] FUTURE ENHANCEMENTS
+Looking ahead, there are several exciting features we plan to implement:
+
+First, push notifications for medication reminders and critical alerts. Second, integration with wearable devices like Fitbit or Apple Watch for automatic activity and health metric tracking. Third, doctor portal access, allowing healthcare providers to view patient data with proper authorization.
+
+We're also planning to add medication interaction checking, which will alert users if medications they're taking might have dangerous interactions. Additionally, we want to implement a medication refill reminder system that automatically calculates when prescriptions need to be refilled based on dosage and frequency.
+
+Another planned feature is a family communication hub, where caregivers and seniors can share notes and updates about health status, making coordination easier.
+
+[13:30-14:30] CHALLENGES & SOLUTIONS
+During development, we faced several interesting challenges. One was implementing the caregiver access system while maintaining security. We solved this with the verification code system and proper RLS policies.
+
+Another challenge was creating a smooth user experience for scheduling medications and checks. The solution was separating the creation process from the scheduling process, using full-screen views instead of nested modals, which allows native date pickers to function properly.
+
+We also had to ensure the web version was truly responsive across all device sizes. This required careful CSS planning and testing on multiple screen sizes, resulting in a comprehensive responsive design system.
+
+[14:30-15:00] CONCLUSION
+In conclusion, Health Companion addresses a real-world need by providing seniors with an accessible, comprehensive health management tool while enabling caregivers to stay informed and involved. The combination of medication tracking, health monitoring, activity logging, and caregiver communication creates a complete health management ecosystem.
+
+The dual-platform approach - mobile app and web version - ensures accessibility regardless of a user's preferred device. The focus on security and privacy means users can trust the application with sensitive health information.
+
+We believe Health Companion can make a real difference in the lives of seniors and their families, promoting better health outcomes through better organization, monitoring, and communication.
+
+Thank you for your attention. I'm happy to answer any questions you may have.
+
+---
+
+END OF SCRIPT
+Total Duration: Approximately 15 minutes
+Words: ~1,500 words (average speaking pace: 100 words per minute)
+

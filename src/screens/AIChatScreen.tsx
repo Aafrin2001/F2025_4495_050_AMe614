@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 18,
     color: '#667eea',
     maxHeight: 100,
     paddingVertical: 5,

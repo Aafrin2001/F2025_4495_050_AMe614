@@ -1,20 +1,35 @@
-import React from 'react'
+import React, { useState } from 'react'
+import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
 
+interface User {
+  id: string
+  firstName: string
+  lastName?: string
+  email: string
+  phoneNumber?: string
+  userType: 'hire' | 'offer'
+}
+
 function App() {
-  // Mock user data for demo
-  const mockUser = {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    userType: 'hire' as const
+  const [user, setUser] = useState<User | null>(null)
+
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser)
+  }
+
+  const handleLogout = () => {
+    setUser(null)
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />
   }
 
   return (
     <MainScreen
-      user={mockUser}
-      onLogout={() => console.log('Logout clicked')}
+      user={user}
+      onLogout={handleLogout}
       onFindServices={() => console.log('Find services clicked')}
       onOfferSkills={() => console.log('Offer skills clicked')}
       onSettingsPress={() => console.log('Settings clicked')}

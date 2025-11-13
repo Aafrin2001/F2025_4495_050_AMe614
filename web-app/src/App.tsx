@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import HomePage from './screens/HomePage'
 import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
 
@@ -11,18 +12,40 @@ interface User {
   userType: 'hire' | 'offer'
 }
 
+type Screen = 'home' | 'login' | 'main'
+
 function App() {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [user, setUser] = useState<User | null>(null)
+
+  const handleSignIn = () => {
+    setCurrentScreen('login')
+  }
+
+  const handleStartTrial = () => {
+    setCurrentScreen('login')
+  }
 
   const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser)
+    setCurrentScreen('main')
   }
 
   const handleLogout = () => {
     setUser(null)
+    setCurrentScreen('home')
   }
 
-  if (!user) {
+  if (currentScreen === 'home') {
+    return (
+      <HomePage
+        onSignIn={handleSignIn}
+        onStartTrial={handleStartTrial}
+      />
+    )
+  }
+
+  if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />
   }
 

@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import { auth } from './lib/supabase'
-import { CaregiverService } from './lib/caregiverService'
+import React, { useState } from 'react'
 import { User } from './types'
 import HomePage from './screens/HomePage'
 import LoginScreen from './screens/LoginScreen'
@@ -16,94 +14,8 @@ type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'a
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [user, setUser] = useState<User | null>(null)
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data, error } = await auth.getSession()
-        
-        if (data?.session?.user && !error) {
-          const userData: User = {
-            id: data.session.user.id,
-            firstName: data.session.user.user_metadata?.firstName || '',
-            lastName: data.session.user.user_metadata?.lastName || '',
-            email: data.session.user.email || '',
-            phoneNumber: data.session.user.user_metadata?.phoneNumber,
-            userType: data.session.user.user_metadata?.userType || 'hire'
-          }
-          
-          if (userData.userType === 'offer') {
-            const relationship = await CaregiverService.getSeniorUserId(userData.id)
-            if (relationship.success && relationship.seniorUserId) {
-              userData.seniorUserId = relationship.seniorUserId
-              userData.seniorEmail = relationship.seniorEmail
-            }
-          }
-          
-          setUser(userData)
-          if (userData.userType === 'offer') {
-            setCurrentScreen('caregiverDashboard')
-          } else {
-            setCurrentScreen('main')
-          }
-        } else {
-          setCurrentScreen('home')
-        }
-      } catch (error) {
-        console.error('Error checking auth session:', error)
-        setCurrentScreen('home')
-      } finally {
-        setIsCheckingAuth(false)
-      }
-    }
-
-    initializeAuth()
-
-    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const userData: User = {
-          id: session.user.id,
-          firstName: session.user.user_metadata?.firstName || '',
-          lastName: session.user.user_metadata?.lastName || '',
-          email: session.user.email || '',
-          phoneNumber: session.user.user_metadata?.phoneNumber,
-          userType: session.user.user_metadata?.userType || 'hire'
-        }
-        
-        if (userData.userType === 'offer') {
-          const relationship = await CaregiverService.getSeniorUserId(userData.id)
-          if (relationship.success && relationship.seniorUserId) {
-            userData.seniorUserId = relationship.seniorUserId
-            userData.seniorEmail = relationship.seniorEmail
-          }
-        }
-        
-        setUser(userData)
-        if (userData.userType === 'offer') {
-          setCurrentScreen('caregiverDashboard')
-        } else {
-          setCurrentScreen('main')
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setCurrentScreen('home')
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  const handleLogin = async (loggedInUser: User) => {
-    if (loggedInUser.userType === 'offer') {
-      const relationship = await CaregiverService.getSeniorUserId(loggedInUser.id)
-      if (relationship.success && relationship.seniorUserId) {
-        loggedInUser.seniorUserId = relationship.seniorUserId
-        loggedInUser.seniorEmail = relationship.seniorEmail
-      }
-    }
+  const handleLogin = (loggedInUser: User) => {
     setUser(loggedInUser)
     if (loggedInUser.userType === 'offer') {
       setCurrentScreen('caregiverDashboard')
@@ -112,8 +24,7 @@ function App() {
     }
   }
 
-  const handleLogout = async () => {
-    await auth.signOut()
+  const handleLogout = () => {
     setUser(null)
     setCurrentScreen('home')
   }
@@ -124,14 +35,6 @@ function App() {
     } else {
       setCurrentScreen('main')
     }
-  }
-
-  if (isCheckingAuth) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div>Loading...</div>
-      </div>
-    )
   }
 
   if (currentScreen === 'home') {

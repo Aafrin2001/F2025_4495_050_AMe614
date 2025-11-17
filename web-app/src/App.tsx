@@ -3,13 +3,18 @@ import { User } from './types'
 import HomePage from './screens/HomePage'
 import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
-// Import other screens as we create them
-// import MedicationScreen from './screens/MedicationScreen'
-// import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
-// import ActivityScreen from './screens/ActivityScreen'
-// etc.
+import MedicationScreen from './screens/MedicationScreen'
+import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
+import ActivityScreen from './screens/ActivityScreen'
+import SettingsScreen from './screens/SettingsScreen'
+import AdminDashboardScreen from './screens/AdminDashboardScreen'
+import CaregiverDashboardScreen from './screens/CaregiverDashboardScreen'
+import CaregiverApprovalScreen from './screens/CaregiverApprovalScreen'
+import ChatSelectionScreen from './screens/ChatSelectionScreen'
+import AIChatScreen from './screens/AIChatScreen'
+import VoiceChatScreen from './screens/VoiceChatScreen'
 
-type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'activities' | 'settings' | 'adminDashboard' | 'caregiverDashboard' | 'caregiverApproval' | 'chatSelection' | 'aiChat' | 'voiceChat'
+type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'activities' | 'settings' | 'adminDashboard' | 'caregiverDashboard' | 'caregiverApproval' | 'chatSelection' | 'aiChat' | 'voiceChat' | 'scheduleCheck' | 'walkingTracker' | 'stretching' | 'breathing' | 'sleepCycle' | 'memoryMatch' | 'wordSearch' | 'puzzlePieces' | 'numberSequence'
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
@@ -20,7 +25,7 @@ function App() {
     if (loggedInUser.userType === 'offer') {
       setCurrentScreen('caregiverDashboard')
     } else {
-      setCurrentScreen('main')
+    setCurrentScreen('main')
     }
   }
 
@@ -51,10 +56,10 @@ function App() {
   }
 
   if (currentScreen === 'main') {
-    return (
-      <MainScreen
-        user={user}
-        onLogout={handleLogout}
+  return (
+    <MainScreen
+      user={user}
+      onLogout={handleLogout}
         onFindServices={() => setCurrentScreen('chatSelection')}
         onOfferSkills={() => setCurrentScreen('activities')}
         onSettingsPress={() => setCurrentScreen('settings')}
@@ -66,103 +71,174 @@ function App() {
     )
   }
 
-  // Placeholder screens - will be created next
   if (currentScreen === 'medication') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Medication Management</h1>
-        <p>Medication screen coming soon...</p>
-      </div>
-    )
+    return <MedicationScreen onBack={handleBackToMain} user={user} />
   }
 
   if (currentScreen === 'healthMonitoring') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Health Monitoring</h1>
-        <p>Health monitoring screen coming soon...</p>
-      </div>
+      <HealthMonitoringScreen
+        onBack={handleBackToMain}
+        onScheduleCheck={() => setCurrentScreen('scheduleCheck')}
+        user={user}
+      />
     )
   }
 
   if (currentScreen === 'activities') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Activities</h1>
-        <p>Activities screen coming soon...</p>
-      </div>
+      <ActivityScreen
+        onBack={handleBackToMain}
+        user={user}
+        onNavigateToWalking={() => setCurrentScreen('walkingTracker')}
+        onNavigateToStretching={() => setCurrentScreen('stretching')}
+        onNavigateToBreathing={() => setCurrentScreen('breathing')}
+        onNavigateToSleep={() => setCurrentScreen('sleepCycle')}
+        onNavigateToMemoryMatch={() => setCurrentScreen('memoryMatch')}
+        onNavigateToWordSearch={() => setCurrentScreen('wordSearch')}
+        onNavigateToPuzzlePieces={() => setCurrentScreen('puzzlePieces')}
+        onNavigateToNumberSequence={() => setCurrentScreen('numberSequence')}
+      />
     )
   }
 
   if (currentScreen === 'settings') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Settings</h1>
-        <p>Settings screen coming soon...</p>
-      </div>
-    )
+    return <SettingsScreen onBack={handleBackToMain} />
   }
 
   if (currentScreen === 'adminDashboard') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Admin Dashboard</h1>
-        <p>Admin dashboard screen coming soon...</p>
-      </div>
-    )
+    return <AdminDashboardScreen onBack={handleBackToMain} userId={user?.id} />
   }
 
   if (currentScreen === 'caregiverDashboard') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleLogout}>Logout</button>
-        <h1>Caregiver Dashboard</h1>
-        <p>Caregiver dashboard screen coming soon...</p>
-      </div>
+      <CaregiverDashboardScreen
+        caregiver={user!}
+        seniorUserId={user?.seniorUserId || ''}
+        onBack={() => {}}
+        onViewAlerts={() => setCurrentScreen('adminDashboard')}
+        onViewDashboard={() => setCurrentScreen('adminDashboard')}
+        onViewMedication={() => setCurrentScreen('medication')}
+        onViewMonitor={() => setCurrentScreen('healthMonitoring')}
+        onLogout={handleLogout}
+        onSettingsPress={() => setCurrentScreen('settings')}
+      />
     )
   }
 
   if (currentScreen === 'caregiverApproval') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Caregiver Approval</h1>
-        <p>Caregiver approval screen coming soon...</p>
-      </div>
+      <CaregiverApprovalScreen
+        onBack={handleBackToMain}
+        onApprovalComplete={() => setCurrentScreen('main')}
+      />
     )
   }
 
   if (currentScreen === 'chatSelection') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Chat Selection</h1>
-        <p>Chat selection screen coming soon...</p>
-      </div>
+      <ChatSelectionScreen
+        onBack={handleBackToMain}
+        onTextChat={() => setCurrentScreen('aiChat')}
+        onVoiceChat={() => setCurrentScreen('voiceChat')}
+      />
     )
   }
 
   if (currentScreen === 'aiChat') {
+    return <AIChatScreen onBack={() => setCurrentScreen('chatSelection')} />
+  }
+
+  if (currentScreen === 'voiceChat') {
+    return <VoiceChatScreen onBack={() => setCurrentScreen('chatSelection')} />
+  }
+
+  if (currentScreen === 'scheduleCheck') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={() => setCurrentScreen('chatSelection')}>Back</button>
-        <h1>AI Chat</h1>
-        <p>AI chat screen coming soon...</p>
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('healthMonitoring')}>Back</button>
+        <h1>Schedule Health Check</h1>
+        <p>Schedule your next health check-up</p>
       </div>
     )
   }
 
-  if (currentScreen === 'voiceChat') {
+  if (currentScreen === 'walkingTracker') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={() => setCurrentScreen('chatSelection')}>Back</button>
-        <h1>Voice Chat</h1>
-        <p>Voice chat screen coming soon...</p>
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Walking Tracker</h1>
+        <p>Track your daily walks and steps</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'stretching') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Stretching Exercises</h1>
+        <p>Guided stretching routines</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'breathing') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Breathing Exercises</h1>
+        <p>Relaxation and mindfulness exercises</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'sleepCycle') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Sleep Cycle</h1>
+        <p>Track and improve your sleep</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'memoryMatch') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Memory Match Game</h1>
+        <p>Match pairs of cards to improve memory</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'wordSearch') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Word Search</h1>
+        <p>Find hidden words in puzzles</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'puzzlePieces') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Puzzle Pieces</h1>
+        <p>Complete jigsaw puzzles</p>
+      </div>
+    )
+  }
+
+  if (currentScreen === 'numberSequence') {
+    return (
+      <div className="placeholder-screen">
+        <button onClick={() => setCurrentScreen('activities')}>Back</button>
+        <h1>Number Sequence</h1>
+        <p>Complete number patterns</p>
       </div>
     )
   }

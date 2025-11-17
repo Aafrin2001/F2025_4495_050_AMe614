@@ -1,14 +1,8 @@
 import React, { useState } from 'react'
 import './LoginScreen.css'
-
-interface User {
-  id: string
-  firstName: string
-  lastName?: string
-  email: string
-  phoneNumber?: string
-  userType: 'hire' | 'offer'
-}
+import { auth } from '../lib/supabase'
+import { CaregiverService } from '../lib/caregiverService'
+import { User } from '../types'
 
 interface LoginScreenProps {
   onLogin: (user: User) => void
@@ -32,7 +26,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setError(null)
     
     if (isLogin) {
-      // Login validation
       if (!email || !password) {
         setError('Please fill in email and password')
         return
@@ -40,26 +33,40 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       
       setIsLoading(true)
       try {
-        // TODO: Replace with actual Supabase auth call
-        // For now, simulate login
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const { data, error: authError } = await auth.signIn(email, password)
         
-        const mockUser: User = {
-          id: '1',
-          firstName: 'John',
-          lastName: 'Doe',
-          email: email,
-          userType: userType
+        if (authError) {
+          setError(authError.message || 'An error occurred during login')
+          setIsLoading(false)
+          return
         }
         
-        onLogin(mockUser)
+        if (data?.user) {
+          const loggedInUserType = data.user.user_metadata?.userType || 'hire'
+          
+          if (loggedInUserType === 'offer') {
+            setShowSeniorEmailInput(true)
+            setIsLoading(false)
+            return
+          }
+          
+          const userData: User = {
+            id: data.user.id,
+            firstName: data.user.user_metadata?.firstName || '',
+            lastName: data.user.user_metadata?.lastName || '',
+            email: data.user.email || '',
+            phoneNumber: data.user.user_metadata?.phoneNumber,
+            userType: loggedInUserType
+          }
+          
+          onLogin(userData)
+        }
       } catch (err: any) {
-        setError(err.message || 'An error occurred during login')
+        setError(err.message || 'An unexpected error occurred during login')
       } finally {
         setIsLoading(false)
       }
     } else {
-      // Signup validation
       if (!firstName || !lastName || !email || !password || !confirmPassword) {
         setError('Please fill in all required fields')
         return
@@ -77,15 +84,26 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       
       setIsLoading(true)
       try {
-        // TODO: Replace with actual Supabase auth call
-        // For now, simulate signup
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const { data, error: authError } = await auth.signUp(email, password, {
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || undefined,
+          userType
+        })
         
-        setError(null)
-        alert('Registration successful! Please check your email to verify your account.')
-        setIsLogin(true)
+        if (authError) {
+          setError(authError.message || 'An error occurred during registration')
+          setIsLoading(false)
+          return
+        }
+        
+        if (data?.user) {
+          setError(null)
+          alert('Registration successful! Please check your email to verify your account.')
+          setIsLogin(true)
+        }
       } catch (err: any) {
-        setError(err.message || 'An error occurred during registration')
+        setError(err.message || 'An unexpected error occurred during registration')
       } finally {
         setIsLoading(false)
       }
@@ -93,26 +111,65 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   }
 
   const handleSeniorEmailSubmit = async () => {
-    if (!seniorEmail) {
+    if (!seniorEmail || !email || !password) {
       setError('Please enter the senior\'s email address')
       return
     }
 
     setIsLoading(true)
     try {
-      // TODO: Replace with actual caregiver service call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const seniorResult = await CaregiverService.findSeniorByEmail(seniorEmail.trim())
       
-      const mockUser: User = {
-        id: '1',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: email,
-        userType: 'offer',
-        phoneNumber: phoneNumber || undefined
+      if (!seniorResult.success || !seniorResult.userId) {
+        setError(seniorResult.error || 'Could not find a user with that email')
+        setIsLoading(false)
+        return
       }
+
+      const { data: userData } = await auth.getCurrentUser()
       
-      onLogin(mockUser)
+      if (!userData?.user) {
+        setError('Could not retrieve user information')
+        setIsLoading(false)
+        return
+      }
+
+      const requestResult = await CaregiverService.requestAccess(
+        seniorEmail.trim(),
+        userData.user.id,
+        userData.user.email || ''
+      )
+
+      if (!requestResult.success) {
+        setError(requestResult.error || 'Could not create access request')
+        setIsLoading(false)
+        return
+      }
+
+      const verifyResult = await CaregiverService.verifyAccess(
+        userData.user.id,
+        seniorEmail.trim()
+      )
+
+      if (verifyResult.success && verifyResult.relationship) {
+        const user: User = {
+          id: userData.user.id,
+          firstName: userData.user.user_metadata?.firstName || '',
+          lastName: userData.user.user_metadata?.lastName || '',
+          email: userData.user.email || '',
+          phoneNumber: userData.user.user_metadata?.phoneNumber,
+          userType: userData.user.user_metadata?.userType || 'offer',
+          seniorEmail: verifyResult.relationship.senior_email,
+          seniorUserId: verifyResult.relationship.senior_id || undefined
+        }
+        
+        setShowSeniorEmailInput(false)
+        setSeniorEmail('')
+        onLogin(user)
+      } else {
+        setError('Access request created. Please wait for senior approval.')
+        setShowSeniorEmailInput(false)
+      }
     } catch (err: any) {
       setError(err.message || 'Could not find a user with that email')
     } finally {

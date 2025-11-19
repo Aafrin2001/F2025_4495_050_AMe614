@@ -29,3 +29,29 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
   })
   const [formErrors, setFormErrors] = useState<string[]>([])
   const [selectedTime, setSelectedTime] = useState('')
+   useEffect(() => {
+    loadMockData()
+  }, [])
+
+  const loadMockData = () => {
+    // Mock medications
+    const mockMedications: Medication[] = [
+      {
+        id: '1',
+        user_id: user?.id || '1',
+        name: 'Aspirin',
+        dosage: '81mg',
+        type: 'pill',
+        frequency: 'Once daily',
+        time: ['08:00'],
+        instruction: 'Take with food',
+        doctor: 'Dr. Smith',
+        pharmacy: 'CVS Pharmacy',
+        refill_date: '2025-12-01',
+        side_effects: '',
+        is_active: true,
+        is_daily: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]

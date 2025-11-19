@@ -3,7 +3,9 @@ import './HealthMonitoringScreen.css'
 import { HealthMetricInput } from '../types'
 
 interface HealthMonitoringScreenProps {
-
+  onBack: () => void
+  onScheduleCheck: () => void
+  user: any
 }
 
 interface VitalSign {

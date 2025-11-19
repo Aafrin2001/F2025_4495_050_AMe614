@@ -82,3 +82,105 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
         is_daily: true,
       },
     ]
+    setTodaySchedule(mockSchedule)
+  }
+
+  const handleAddTime = () => {
+    if (selectedTime && !formData.time.includes(selectedTime)) {
+      setFormData({ ...formData, time: [...formData.time, selectedTime] })
+      setSelectedTime('')
+    }
+  }
+
+  const handleRemoveTime = (time: string) => {
+    setFormData({ ...formData, time: formData.time.filter(t => t !== time) })
+  }
+
+  const handleSubmit = () => {
+    const errors: string[] = []
+    if (!formData.name.trim()) errors.push('Medication name is required')
+    if (!formData.dosage.trim()) errors.push('Dosage is required')
+    if (!formData.frequency.trim()) errors.push('Frequency is required')
+    if (formData.time.length === 0) errors.push('At least one time is required')
+
+    if (errors.length > 0) {
+      setFormErrors(errors)
+      return
+    }
+
+    setFormErrors([])
+    const newMedication: Medication = {
+      id: editingMedication?.id || `med_${Date.now()}`,
+      user_id: user?.id || '1',
+      ...formData,
+      created_at: editingMedication?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    if (editingMedication) {
+      setMedications(medications.map(m => m.id === editingMedication.id ? newMedication : m))
+    } else {
+      setMedications([...medications, newMedication])
+    }
+
+    setShowAddModal(false)
+    setEditingMedication(null)
+    resetForm()
+    loadMockData()
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      dosage: '',
+      type: 'pill',
+      frequency: '',
+      time: [],
+      instruction: '',
+      doctor: '',
+      pharmacy: '',
+      refill_date: '',
+      side_effects: '',
+      is_active: true,
+      is_daily: true,
+    })
+    setFormErrors([])
+    setSelectedTime('')
+  }
+
+  const handleEdit = (medication: Medication) => {
+    setEditingMedication(medication)
+    setFormData({
+      name: medication.name,
+      dosage: medication.dosage,
+      type: medication.type,
+      frequency: medication.frequency,
+      time: medication.time,
+      instruction: medication.instruction || '',
+      doctor: medication.doctor || '',
+      pharmacy: medication.pharmacy || '',
+      refill_date: medication.refill_date || '',
+      side_effects: medication.side_effects || '',
+      is_active: medication.is_active,
+      is_daily: medication.is_daily,
+    })
+    setShowAddModal(true)
+  }
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this medication?')) {
+      setMedications(medications.filter(m => m.id !== id))
+      loadMockData()
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'overdue': return '#F44336'
+      case 'due_now': return '#FF9800'
+      case 'upcoming': return '#4CAF50'
+      default: return '#666'
+    }
+  }
+
+  return ()

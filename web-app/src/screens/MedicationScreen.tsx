@@ -55,3 +55,30 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
         updated_at: new Date().toISOString(),
       },
     ]
+        setMedications(mockMedications)
+
+    // Mock stats
+    setStats({
+      totalMedications: mockMedications.length,
+      activeDailyMedications: 1,
+      activePrnMedications: 0,
+      totalReminders: 1,
+      overdueMedications: 0,
+      medicationsDueNow: 0,
+      prnUsedToday: 0,
+    })
+
+    // Mock schedule
+    const mockSchedule: MedicationScheduleItem[] = [
+      {
+        id: '1',
+        medication_id: '1',
+        name: 'Aspirin',
+        dosage: '81mg',
+        type: 'pill',
+        scheduled_time: '08:00',
+        status: 'upcoming',
+        instruction: 'Take with food',
+        is_daily: true,
+      },
+    ]

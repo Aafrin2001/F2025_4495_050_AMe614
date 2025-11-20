@@ -45,26 +45,27 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
       setSeniorEmail('')
     }
   }
-return (
-      <div className="caregiver-dashboard-screen">
-        <div className="caregiver-header">
-          <div className="header-left">
-            <h1 className="caregiver-title">Caregiver Dashboard</h1>
-            <p className="caregiver-subtitle">Monitoring for {caregiver.seniorEmail || 'Senior'}</p>
-          </div>
-          <div className="header-actions">
-            {onSettingsPress && (
-              <button className="icon-button" onClick={onSettingsPress}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
-                </svg>
-              </button>
-            )}
-            <button className="logout-button" onClick={onLogout}>Logout</button>
-          </div>
+  return (
+    <div className="caregiver-dashboard-screen">
+      <div className="caregiver-header">
+        <div className="header-left">
+          <h1 className="caregiver-title">Caregiver Dashboard</h1>
+          <p className="caregiver-subtitle">Monitoring for {caregiver.seniorEmail || 'Senior'}</p>
         </div>
-              <div className="caregiver-content">
+        <div className="header-actions">
+          {onSettingsPress && (
+            <button className="icon-button" onClick={onSettingsPress}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
+              </svg>
+            </button>
+          )}
+          <button className="logout-button" onClick={onLogout}>Logout</button>
+        </div>
+      </div>
+
+      <div className="caregiver-content">
         {!hasAccess ? (
           <div className="pending-access">
             <div className="pending-card">
@@ -119,7 +120,8 @@ return (
           </>
         )}
       </div>
-         {showAddSeniorModal && (
+
+      {showAddSeniorModal && (
         <div className="modal-overlay" onClick={() => setShowAddSeniorModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
@@ -150,8 +152,8 @@ return (
           </div>
         </div>
       )}
-      </div>
-)
+    </div>
+  )
 }
 
 export default CaregiverDashboardScreen

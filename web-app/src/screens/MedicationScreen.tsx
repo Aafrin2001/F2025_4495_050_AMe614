@@ -201,7 +201,9 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
           Add Medication
         </button>
       </div>
-            <div className="medication-content">
+      
+
+      <div className="medication-content">
         {/* Stats Cards */}
         {stats && (
           <div className="stats-grid">
@@ -348,6 +350,152 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
         </div>
       </div>
 
-)
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => { setShowAddModal(false); resetForm(); setEditingMedication(null) }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingMedication ? 'Edit Medication' : 'Add New Medication'}</h2>
+              <button className="modal-close" onClick={() => { setShowAddModal(false); resetForm(); setEditingMedication(null) }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            {formErrors.length > 0 && (
+              <div className="error-message">
+                <ul>
+                  {formErrors.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Medication Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Aspirin"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Dosage *</label>
+                  <input
+                    type="text"
+                    value={formData.dosage}
+                    onChange={e => setFormData({ ...formData, dosage: e.target.value })}
+                    placeholder="e.g., 81mg"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Type *</label>
+                  <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as any })}>
+                    <option value="pill">Pill</option>
+                    <option value="liquid">Liquid</option>
+                    <option value="injection">Injection</option>
+                    <option value="cream">Cream</option>
+                    <option value="inhaler">Inhaler</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Frequency *</label>
+                <input
+                  type="text"
+                  value={formData.frequency}
+                  onChange={e => setFormData({ ...formData, frequency: e.target.value })}
+                  placeholder="e.g., Once daily, Twice daily"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Times *</label>
+                <div className="time-input-group">
+                  <input
+                    type="time"
+                    value={selectedTime}
+                    onChange={e => setSelectedTime(e.target.value)}
+                  />
+                  <button type="button" className="btn-secondary" onClick={handleAddTime}>Add Time</button>
+                </div>
+                {formData.time.length > 0 && (
+                  <div className="time-tags">
+                    {formData.time.map((time, idx) => (
+                      <span key={idx} className="time-tag">
+                        {time}
+                        <button type="button" onClick={() => handleRemoveTime(time)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>Instructions</label>
+                <textarea
+                  value={formData.instruction}
+                  onChange={e => setFormData({ ...formData, instruction: e.target.value })}
+                  placeholder="e.g., Take with food"
+                  rows={3}
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Doctor</label>
+                  <input
+                    type="text"
+                    value={formData.doctor}
+                    onChange={e => setFormData({ ...formData, doctor: e.target.value })}
+                    placeholder="Dr. Name"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Pharmacy</label>
+                  <input
+                    type="text"
+                    value={formData.pharmacy}
+                    onChange={e => setFormData({ ...formData, pharmacy: e.target.value })}
+                    placeholder="Pharmacy name"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formData.is_daily}
+                    onChange={e => setFormData({ ...formData, is_daily: e.target.checked })}
+                  />
+                  Daily medication (scheduled)
+                </label>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => { setShowAddModal(false); resetForm(); setEditingMedication(null) }}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleSubmit}>
+                {editingMedication ? 'Update' : 'Add'} Medication
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default MedicationScreen
 

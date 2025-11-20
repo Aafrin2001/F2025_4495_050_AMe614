@@ -4,11 +4,127 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EAi - Your Health Companion</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>EAi - Your AI Wellness Companion for Aging</title>
+    <meta name="title" content="EAi - Your AI Wellness Companion for Aging" />
+    <meta name="description" content="EAi Healthcare Companion is a sophisticated AI-powered wellness application designed to support healthy aging. Track medications, monitor health metrics, manage activities, and stay connected with caregivers." />
+    <meta name="keywords" content="healthcare, wellness, aging, AI companion, medication tracking, health metrics, caregiver, senior health" />
+    <meta name="author" content="EAi Healthcare" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://eai-healthcare.com/" />
+    <meta property="og:title" content="EAi - Your AI Wellness Companion for Aging" />
+    <meta property="og:description" content="EAi Healthcare Companion is a sophisticated AI-powered wellness application designed to support healthy aging. Track medications, monitor health metrics, manage activities, and stay connected with caregivers." />
+    <meta property="og:image" content="/assets/og-image.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://eai-healthcare.com/" />
+    <meta property="twitter:title" content="EAi - Your AI Wellness Companion for Aging" />
+    <meta property="twitter:description" content="EAi Healthcare Companion is a sophisticated AI-powered wellness application designed to support healthy aging. Track medications, monitor health metrics, manage activities, and stay connected with caregivers." />
+    <meta property="twitter:image" content="/assets/og-image.png" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="msapplication-TileColor" content="#667eea" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Additional Styles -->
+    <style>
+      /* Loading Screen Styles */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+      
+      #loading-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      .loader {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        color: white;
+        margin-top: 20px;
+        font-family: 'Inter', sans-serif;
+        font-size: 18px;
+        font-weight: 500;
+      }
+      
+      /* Prevent flash of unstyled content */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loader"></div>
+      <div class="loading-text">Loading EAi Healthcare Companion...</div>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Hide loading screen when app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(function() {
+              loadingScreen.remove();
+            }, 500);
+          }
+        }, 500);
+      });
+    </script>
   </body>
 </html>
 

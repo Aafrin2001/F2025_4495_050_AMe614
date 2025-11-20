@@ -183,6 +183,6 @@ const MedicationScreen: React.FC<MedicationScreenProps> = ({ onBack, user }) => 
     }
   }
 
-  return ()
+  return (<div className="medication-screen"> </div>)
   export default MedicationScreen
 

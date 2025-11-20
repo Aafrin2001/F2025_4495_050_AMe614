@@ -45,3 +45,7 @@ const CaregiverDashboardScreen: React.FC<CaregiverDashboardScreenProps> = ({
       setSeniorEmail('')
     }
   }
+return (  )
+}
+
+export default CaregiverDashboardScreen

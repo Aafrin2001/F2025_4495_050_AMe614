@@ -109,3 +109,21 @@
   line-height: 1.6;
   margin: 0 0 2rem 0;
 }
+@media (max-width: 768px) {
+  .caregiver-dashboard-screen {
+    padding: 1rem;
+  }
+
+  .caregiver-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -64,6 +64,61 @@ return (
             <button className="logout-button" onClick={onLogout}>Logout</button>
           </div>
         </div>
+              <div className="caregiver-content">
+        {!hasAccess ? (
+          <div className="pending-access">
+            <div className="pending-card">
+              <div className="pending-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <h2>Pending Access Approval</h2>
+              <p>Your request to access the senior's health data is pending approval. Once approved, you'll be able to view medications, health metrics, and more.</p>
+              <button className="btn-primary" onClick={() => setShowAddSeniorModal(true)}>
+                Add Senior Email
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="quick-actions-grid">
+              {quickActions.map(action => (
+                <div
+                  key={action.id}
+                  className="action-card"
+                  style={{ '--action-color': action.color } as React.CSSProperties}
+                  onClick={action.onClick}
+                >
+                  <div className="action-icon" style={{ backgroundColor: action.color + '20', color: action.color }}>
+                    <span style={{ fontSize: '2rem' }}>{action.icon}</span>
+                  </div>
+                  <h3 className="action-name">{action.name}</h3>
+                </div>
+              ))}
+            </div>
+
+            <div className="summary-section">
+              <h2 className="section-title">Today's Summary</h2>
+              <div className="summary-grid">
+                <div className="summary-card">
+                  <div className="summary-label">Medications Due</div>
+                  <div className="summary-value">2</div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-label">Health Readings</div>
+                  <div className="summary-value">3</div>
+                </div>
+                <div className="summary-card">
+                  <div className="summary-label">Activities Completed</div>
+                  <div className="summary-value">1</div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
       </div>
 )
 }

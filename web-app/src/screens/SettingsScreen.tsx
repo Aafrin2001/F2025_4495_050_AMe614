@@ -4,6 +4,7 @@ import './SettingsScreen.css'
 interface SettingsScreenProps {
   onBack: () => void
 }
+
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const [settings, setSettings] = useState({
     medicationReminders: true,
@@ -45,7 +46,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       ],
     },
   ]
-    return (
+
+  return (
     <div className="settings-screen">
       <div className="settings-header">
         <button className="back-button" onClick={onBack}>
@@ -112,4 +114,3 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
 }
 
 export default SettingsScreen
-

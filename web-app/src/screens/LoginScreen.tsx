@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import './LoginScreen.css'
 import { User } from '../types'
+import { auth } from '../lib/supabase'
+import { CaregiverService } from '../lib/caregiverService'
 
 interface LoginScreenProps {
   onLogin: (user: User) => void
@@ -30,27 +32,49 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       }
       
       setIsLoading(true)
-      // Simulate login delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock login - create user from email
-      const userData: User = {
-        id: `user_${Date.now()}`,
-        firstName: email.split('@')[0],
-        lastName: '',
-        email: email,
-        phoneNumber: phoneNumber || undefined,
-        userType: userType
-      }
-      
-      if (userType === 'offer') {
-        setShowSeniorEmailInput(true)
+      try {
+        const { data, error } = await auth.signIn(email, password)
+        
+        if (error) {
+          setError(error.message || 'An error occurred during login')
+          setIsLoading(false)
+          return
+        }
+        
+        if (data?.user) {
+          const loggedInUserType = data.user.user_metadata?.userType || 'hire'
+          
+          // If user is a caregiver, ask for senior email
+          if (loggedInUserType === 'offer') {
+            setShowSeniorEmailInput(true)
+            setIsLoading(false)
+            return // Don't proceed with login yet, wait for senior email
+          }
+          
+          // Convert Supabase user to our User type
+          const userData: User = {
+            id: data.user.id,
+            firstName: data.user.user_metadata?.firstName || '',
+            lastName: data.user.user_metadata?.lastName || '',
+            email: data.user.email || '',
+            phoneNumber: data.user.user_metadata?.phoneNumber,
+            userType: loggedInUserType
+          }
+          
+          onLogin(userData)
+        }
+      } catch (error: any) {
+        // Handle network errors
+        if (error?.message?.includes('fetch') || error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
+          setError('Network error: Could not connect to the server. Please check your internet connection and ensure Supabase is configured correctly.')
+        } else if (error?.message?.includes('not configured')) {
+          setError('Supabase is not configured. Please set up your environment variables.')
+        } else {
+          setError(error?.message || 'An unexpected error occurred during login')
+        }
+      } finally {
         setIsLoading(false)
-        return
       }
-      
-      onLogin(userData)
-      setIsLoading(false)
     } else {
       if (!firstName || !lastName || !email || !password || !confirmPassword) {
         setError('Please fill in all required fields')
@@ -68,41 +92,143 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       }
       
       setIsLoading(true)
-      // Simulate signup delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      setError(null)
-      alert('Registration successful! You can now sign in.')
-      setIsLogin(true)
-      setIsLoading(false)
+      try {
+        const { data, error } = await auth.signUp(email, password, {
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || undefined,
+          userType
+        })
+        
+        if (error) {
+          setError(error.message || 'An error occurred during registration')
+          setIsLoading(false)
+          return
+        }
+        
+        if (data?.user) {
+          setError(null)
+          alert('Registration successful! Please check your email to verify your account before signing in.')
+          setIsLogin(true)
+          // Clear form
+          setFirstName('')
+          setLastName('')
+          setEmail('')
+          setPhoneNumber('')
+          setPassword('')
+          setConfirmPassword('')
+        }
+      } catch (error: any) {
+        // Handle network errors
+        if (error?.message?.includes('fetch') || error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
+          setError('Network error: Could not connect to the server. Please check your internet connection and ensure Supabase is configured correctly.')
+        } else if (error?.message?.includes('not configured')) {
+          setError('Supabase is not configured. Please set up your environment variables.')
+        } else {
+          setError(error?.message || 'An unexpected error occurred during registration')
+        }
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
   const handleSeniorEmailSubmit = async () => {
-    if (!seniorEmail) {
+    if (!seniorEmail || !email || !password) {
       setError('Please enter the senior\'s email address')
       return
     }
 
     setIsLoading(true)
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Mock caregiver login
-    const user: User = {
-      id: `caregiver_${Date.now()}`,
-      firstName: firstName || email.split('@')[0],
-      lastName: lastName || '',
-      email: email,
-      phoneNumber: phoneNumber || undefined,
-      userType: 'offer',
-      seniorEmail: seniorEmail.trim()
+    try {
+      // Find senior user by email
+      const seniorResult = await CaregiverService.findSeniorByEmail(seniorEmail.trim())
+      
+      if (!seniorResult.success || !seniorResult.userId) {
+        setError(seniorResult.error || 'Could not find a user with that email. Please ensure the senior has an account.')
+        setIsLoading(false)
+        return
+      }
+
+      // Get current user (we already logged in)
+      const { user: currentUser, error: userError } = await auth.getCurrentUser()
+      
+      if (userError || !currentUser) {
+        setError('Could not retrieve user information')
+        setIsLoading(false)
+        return
+      }
+
+      // Request caregiver access (creates pending relationship)
+      const requestResult = await CaregiverService.requestAccess(
+        seniorEmail.trim(),
+        currentUser.id,
+        currentUser.email || ''
+      )
+
+      if (!requestResult.success) {
+        setError(requestResult.error || 'Could not create access request. The senior may need to approve your request first.')
+        setIsLoading(false)
+        return
+      }
+
+      // Verify access (check if already approved)
+      const verifyResult = await CaregiverService.verifyAccess(
+        currentUser.id,
+        seniorEmail.trim()
+      )
+
+      if (verifyResult.success && verifyResult.relationship) {
+        // Already approved - proceed with login
+        const user: User = {
+          id: currentUser.id,
+          firstName: currentUser.user_metadata?.firstName || '',
+          lastName: currentUser.user_metadata?.lastName || '',
+          email: currentUser.email || '',
+          phoneNumber: currentUser.user_metadata?.phoneNumber,
+          userType: currentUser.user_metadata?.userType || 'offer',
+          seniorEmail: verifyResult.relationship.senior_email,
+          seniorUserId: verifyResult.relationship.senior_id || undefined
+        }
+        
+        setShowSeniorEmailInput(false)
+        setSeniorEmail('')
+        onLogin(user)
+      } else {
+        // Pending approval - show message but still log them in
+        alert(
+          `Access request sent! A request has been sent to ${seniorEmail.trim()}. ` +
+          `The senior will need to approve your access before you can view their information.\n\n` +
+          `Verification Code: ${requestResult.verificationCode}\n\n` +
+          `Please ask the senior to approve your request or provide this code for verification.`
+        )
+        
+        const user: User = {
+          id: currentUser.id,
+          firstName: currentUser.user_metadata?.firstName || '',
+          lastName: currentUser.user_metadata?.lastName || '',
+          email: currentUser.email || '',
+          phoneNumber: currentUser.user_metadata?.phoneNumber,
+          userType: currentUser.user_metadata?.userType || 'offer',
+          seniorEmail: seniorEmail.trim(),
+        }
+        
+        setShowSeniorEmailInput(false)
+        setSeniorEmail('')
+        onLogin(user)
+      }
+    } catch (error: any) {
+      // Handle network errors
+      if (error?.message?.includes('fetch') || error?.message?.includes('Failed to fetch') || error?.message?.includes('Network error')) {
+        setError('Network error: Could not connect to the server. Please check your internet connection and ensure Supabase is configured correctly.')
+      } else if (error?.message?.includes('not configured')) {
+        setError('Supabase is not configured. Please set up your environment variables.')
+      } else {
+        setError(error?.message || 'An unexpected error occurred while connecting to senior account')
+      }
+    } finally {
+      setIsLoading(false)
     }
-    
-    setShowSeniorEmailInput(false)
-    setSeniorEmail('')
-    onLogin(user)
-    setIsLoading(false)
   }
 
   return (

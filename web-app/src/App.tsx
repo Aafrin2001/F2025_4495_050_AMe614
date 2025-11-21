@@ -3,11 +3,11 @@ import { User } from './types'
 import HomePage from './screens/HomePage'
 import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
+import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 // Import other screens as we create them
 // import MedicationScreen from './screens/MedicationScreen'
-// import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
 // import ActivityScreen from './screens/ActivityScreen'
 // etc.
 
@@ -232,11 +232,14 @@ function App() {
 
   if (currentScreen === 'healthMonitoring') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Health Monitoring</h1>
-        <p>Health monitoring screen coming soon...</p>
-      </div>
+      <HealthMonitoringScreen
+        onBack={handleBackToMain}
+        onScheduleCheck={() => {
+          // TODO: Implement schedule check functionality
+          alert('Schedule check feature coming soon')
+        }}
+        user={user}
+      />
     )
   }
 

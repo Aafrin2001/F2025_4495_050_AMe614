@@ -5,11 +5,9 @@ import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
 import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
 import ActivityScreen from './screens/ActivityScreen'
+import MedicationScreen from './screens/MedicationScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
-// Import other screens as we create them
-// import MedicationScreen from './screens/MedicationScreen'
-// etc.
 
 type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'activities' | 'settings' | 'adminDashboard' | 'caregiverDashboard' | 'caregiverApproval' | 'chatSelection' | 'aiChat' | 'voiceChat'
 
@@ -219,15 +217,8 @@ function App() {
     )
   }
 
-  // Placeholder screens - will be created next
   if (currentScreen === 'medication') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Medication Management</h1>
-        <p>Medication screen coming soon...</p>
-      </div>
-    )
+    return <MedicationScreen onBack={handleBackToMain} user={user} />;
   }
 
   if (currentScreen === 'healthMonitoring') {

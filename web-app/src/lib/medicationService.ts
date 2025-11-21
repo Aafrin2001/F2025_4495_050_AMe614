@@ -257,9 +257,13 @@ export class MedicationService {
     if (!input.dosage?.trim()) errors.push('Dosage is required');
     if (!input.type) errors.push('Medication type is required');
     if (!input.frequency?.trim()) errors.push('Frequency is required');
-    if (!input.time || input.time.length === 0) errors.push('At least one time is required');
     
-    if (input.time) {
+    // Only require times for PRN medications (non-daily)
+    if (input.is_daily === false && (!input.time || input.time.length === 0)) {
+      errors.push('At least one time is required for PRN medications');
+    }
+    
+    if (input.time && input.time.length > 0) {
       const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
       for (const time of input.time) {
         if (!timeRegex.test(time)) {
@@ -269,6 +273,48 @@ export class MedicationService {
     }
 
     return { isValid: errors.length === 0, errors };
+  }
+
+  static formatTime(timeStr: string): string {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+
+  static getMedicationTypeIcon(type: string): string {
+    switch (type) {
+      case 'pill': return 'medical-outline';
+      case 'liquid': return 'water-outline';
+      case 'injection': return 'medical-outline';
+      case 'cream': return 'hand-left-outline';
+      case 'inhaler': return 'airplane-outline';
+      default: return 'medical-outline';
+    }
+  }
+
+  static getMedicationTypeColor(type: string): string {
+    switch (type) {
+      case 'pill': return '#4CAF50';
+      case 'liquid': return '#2196F3';
+      case 'injection': return '#FF9800';
+      case 'cream': return '#9C27B0';
+      case 'inhaler': return '#00BCD4';
+      default: return '#666666';
+    }
+  }
+
+  static getStatusColor(status: string): string {
+    switch (status) {
+      case 'overdue': return '#F44336';
+      case 'due_now': return '#FF9800';
+      case 'upcoming': return '#4CAF50';
+      default: return '#666666';
+    }
   }
 }
 

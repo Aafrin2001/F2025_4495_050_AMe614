@@ -4,11 +4,11 @@ import HomePage from './screens/HomePage'
 import LoginScreen from './screens/LoginScreen'
 import MainScreen from './screens/MainScreen'
 import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
+import ActivityScreen from './screens/ActivityScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 // Import other screens as we create them
 // import MedicationScreen from './screens/MedicationScreen'
-// import ActivityScreen from './screens/ActivityScreen'
 // etc.
 
 type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'activities' | 'settings' | 'adminDashboard' | 'caregiverDashboard' | 'caregiverApproval' | 'chatSelection' | 'aiChat' | 'voiceChat'
@@ -245,11 +245,10 @@ function App() {
 
   if (currentScreen === 'activities') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Activities</h1>
-        <p>Activities screen coming soon...</p>
-      </div>
+      <ActivityScreen
+        onBack={handleBackToMain}
+        user={user}
+      />
     )
   }
 

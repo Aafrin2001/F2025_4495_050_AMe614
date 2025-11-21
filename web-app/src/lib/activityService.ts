@@ -159,5 +159,22 @@ export class ActivityService {
       return { success: false, error: error.message || 'Failed to calculate stats' };
     }
   }
+
+  static async deleteActivity(activityId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', activityId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to delete activity' };
+    }
+  }
 }
 

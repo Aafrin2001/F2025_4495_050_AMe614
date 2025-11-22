@@ -44,13 +44,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         if (data?.user) {
           const loggedInUserType = data.user.user_metadata?.userType || 'hire'
           
-          // If user is a caregiver, ask for senior email
-          if (loggedInUserType === 'offer') {
-            setShowSeniorEmailInput(true)
-            setIsLoading(false)
-            return // Don't proceed with login yet, wait for senior email
-          }
-          
           // Convert Supabase user to our User type
           const userData: User = {
             id: data.user.id,
@@ -59,6 +52,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             email: data.user.email || '',
             phoneNumber: data.user.user_metadata?.phoneNumber,
             userType: loggedInUserType
+          }
+          
+          // If caregiver, try to load existing relationship
+          if (loggedInUserType === 'offer') {
+            try {
+              const relationship = await CaregiverService.getSeniorUserId(userData.id)
+              if (relationship.success && relationship.seniorUserId) {
+                userData.seniorUserId = relationship.seniorUserId
+                userData.seniorEmail = relationship.seniorEmail
+              }
+            } catch (relError) {
+              console.error('Error loading caregiver relationship:', relError)
+              // Continue without relationship data - caregiver can add patients from dashboard
+            }
           }
           
           onLogin(userData)

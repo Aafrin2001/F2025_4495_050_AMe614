@@ -11,7 +11,7 @@ import VoiceChatScreen from './screens/VoiceChatScreen'
 import ChatSelectionScreen from './screens/ChatSelectionScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CaregiverDashboardScreen from './screens/CaregiverDashboardScreen'
-import { auth } from './lib/supabase'
+import { auth, isConfigured } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 
 type Screen = 'home' | 'login' | 'main' | 'medication' | 'healthMonitoring' | 'activities' | 'settings' | 'adminDashboard' | 'caregiverDashboard' | 'caregiverApproval' | 'chatSelection' | 'aiChat' | 'voiceChat'
@@ -22,21 +22,48 @@ function App() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
+    let timeoutId: NodeJS.Timeout | null = null
+
     const initializeAuth = async () => {
       try {
         // Check if Supabase is configured
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-        
-        if (!supabaseUrl || !supabaseKey) {
+        if (!isConfigured) {
           console.warn('Supabase credentials not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file')
-          setCurrentScreen('home')
-          setIsCheckingAuth(false)
+          if (isMounted) {
+            setCurrentScreen('home')
+            setIsCheckingAuth(false)
+          }
           return
         }
 
-        // Check for existing session
-        const { data, error } = await auth.getSession()
+        // Set a timeout to prevent infinite loading (5 seconds)
+        const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+          timeoutId = setTimeout(() => {
+            console.warn('Auth check timeout - proceeding without session')
+            resolve({ data: null, error: { message: 'Timeout' } })
+          }, 5000)
+        })
+
+        // Check for existing session with timeout
+        const sessionPromise = auth.getSession()
+        let sessionResult: any
+        
+        try {
+          sessionResult = await Promise.race([sessionPromise, timeoutPromise])
+        } catch (err) {
+          console.error('Error in session check:', err)
+          sessionResult = { data: null, error: { message: 'Session check failed' } }
+        }
+        
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        
+        if (!isMounted) return
+        
+        const { data, error } = sessionResult
         
         if (data?.session?.user && !error) {
           // User is already logged in, convert to our User type
@@ -49,11 +76,16 @@ function App() {
             userType: data.session.user.user_metadata?.userType || 'hire'
           }
           
-          // If caregiver, load relationship
+          // If caregiver, load relationship (with timeout)
           if (userData.userType === 'offer') {
             try {
-              const relationship = await CaregiverService.getSeniorUserId(userData.id)
-              if (relationship.success && relationship.seniorUserId) {
+              const relationshipPromise = CaregiverService.getSeniorUserId(userData.id)
+              const relationshipTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Relationship check timeout')), 3000)
+              })
+              
+              const relationship = await Promise.race([relationshipPromise, relationshipTimeout]) as any
+              if (relationship?.success && relationship.seniorUserId) {
                 userData.seniorUserId = relationship.seniorUserId
                 userData.seniorEmail = relationship.seniorEmail
               }
@@ -63,27 +95,45 @@ function App() {
             }
           }
           
-          setUser(userData)
-          // Route caregivers to caregiver dashboard (even if pending), seniors to main screen
-          if (userData.userType === 'offer') {
-            setCurrentScreen('caregiverDashboard')
-          } else {
-            setCurrentScreen('main')
+          if (isMounted) {
+            setUser(userData)
+            // Route caregivers to caregiver dashboard (even if pending), seniors to main screen
+            if (userData.userType === 'offer') {
+              setCurrentScreen('caregiverDashboard')
+            } else {
+              setCurrentScreen('main')
+            }
           }
         } else {
           // No existing session, proceed with normal flow
-          setCurrentScreen('home')
+          if (isMounted) {
+            setCurrentScreen('home')
+          }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error checking auth session:', error)
         // On error, proceed with normal flow
-        setCurrentScreen('home')
+        if (isMounted) {
+          setCurrentScreen('home')
+        }
       } finally {
-        setIsCheckingAuth(false)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        if (isMounted) {
+          setIsCheckingAuth(false)
+        }
       }
     }
 
     initializeAuth()
+
+    return () => {
+      isMounted = false
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
 
     // Listen for auth state changes (only if Supabase is configured)
     let subscription: { unsubscribe: () => void } | null = null

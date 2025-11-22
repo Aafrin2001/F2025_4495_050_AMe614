@@ -167,5 +167,132 @@ export class CaregiverService {
       return { success: false, error: error.message || 'Error fetching relationships' };
     }
   }
+
+  /**
+   * Get pending caregiver requests for a senior (by email)
+   */
+  static async getSeniorRelationships(
+    seniorEmail?: string,
+    seniorId?: string
+  ): Promise<{ 
+    success: boolean; 
+    data?: CaregiverRelationship[]; 
+    error?: string 
+  }> {
+    try {
+      let query = supabase
+        .from('caregiver_relationships')
+        .select('*')
+        .order('requested_at', { ascending: false });
+
+      if (seniorId) {
+        query = query.eq('senior_id', seniorId);
+      } else if (seniorEmail) {
+        query = query.eq('senior_email', seniorEmail.toLowerCase());
+      } else {
+        // Get current user's email
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !user.email) {
+          return { success: false, error: 'User not authenticated' };
+        }
+        query = query.eq('senior_email', user.email.toLowerCase());
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching senior relationships:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('Error fetching senior relationships:', error);
+      return { success: false, error: error.message || 'Error fetching relationships' };
+    }
+  }
+
+  /**
+   * Approve a caregiver request (called by senior)
+   */
+  static async approveRequest(
+    relationshipId: string, 
+    seniorId: string,
+    verificationCode?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const updateData: any = {
+        status: 'approved',
+        senior_id: seniorId,
+        approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // If verification code provided, include it in the check
+      let query = supabase
+        .from('caregiver_relationships')
+        .update(updateData)
+        .eq('id', relationshipId)
+        .eq('status', 'pending');
+
+      if (verificationCode) {
+        query = query.eq('verification_code', verificationCode);
+      }
+
+      const { error } = await query;
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Error approving request' };
+    }
+  }
+
+  /**
+   * Reject a caregiver request (called by senior)
+   */
+  static async rejectRequest(relationshipId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Try using the database function first (bypasses RLS)
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('reject_caregiver_request', { relationship_id: relationshipId });
+
+      if (!functionError && functionResult) {
+        return { success: true };
+      }
+
+      // If function doesn't exist or fails, fall back to direct update
+      if (functionError && functionError.code !== '42883') { // 42883 = function doesn't exist
+        console.error('Function error:', functionError);
+        // Continue to fallback
+      }
+
+      // Fallback: Direct update (will use RLS policy)
+      const { error } = await supabase
+        .from('caregiver_relationships')
+        .update({
+          status: 'rejected',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', relationshipId)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error rejecting relationship:', error);
+        return { 
+          success: false, 
+          error: error.message || 'Failed to reject request. Please check RLS policies.' 
+        };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error in rejectRequest:', error);
+      return { success: false, error: error.message || 'Error rejecting request' };
+    }
+  }
 }
 

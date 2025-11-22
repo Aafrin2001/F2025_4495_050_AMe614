@@ -11,6 +11,7 @@ import VoiceChatScreen from './screens/VoiceChatScreen'
 import ChatSelectionScreen from './screens/ChatSelectionScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import CaregiverDashboardScreen from './screens/CaregiverDashboardScreen'
+import CaregiverApprovalScreen from './screens/CaregiverApprovalScreen'
 import { auth, isConfigured } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 
@@ -342,11 +343,16 @@ function App() {
 
   if (currentScreen === 'caregiverApproval') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Caregiver Approval</h1>
-        <p>Caregiver approval screen coming soon...</p>
-      </div>
+      <CaregiverApprovalScreen
+        onBack={handleBackToMain}
+        onApprovalComplete={() => {
+          // Refresh the main screen to update notification badge
+          if (user?.userType === 'hire') {
+            // The MainScreen will reload pending requests on mount
+            setCurrentScreen('main')
+          }
+        }}
+      />
     )
   }
 

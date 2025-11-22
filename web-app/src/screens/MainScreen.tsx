@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './MainScreen.css'
+import { CaregiverService } from '../lib/caregiverService'
+import { supabase } from '../lib/supabase'
 
 interface User {
   id: string
@@ -32,7 +34,36 @@ const MainScreen: React.FC<MainScreenProps> = ({
   onHealthMonitoring,
   onCaregiverApproval
 }) => {
-  const [pendingCaregiverRequests] = useState(0)
+  const [pendingCaregiverRequests, setPendingCaregiverRequests] = useState(0)
+
+  useEffect(() => {
+    // Load pending caregiver requests for seniors
+    if (user && user.userType === 'hire') {
+      loadPendingRequests()
+      // Refresh every 30 seconds to check for new requests
+      const interval = setInterval(loadPendingRequests, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  const loadPendingRequests = async () => {
+    try {
+      if (!user?.email) return
+
+      const { data, error } = await supabase
+        .from('caregiver_relationships')
+        .select('id')
+        .eq('senior_email', user.email.toLowerCase())
+        .eq('status', 'pending')
+      
+      if (!error && data) {
+        setPendingCaregiverRequests(data.length)
+      }
+    } catch (error) {
+      // Silently fail - don't disrupt the UI
+      console.error('Error loading pending requests:', error)
+    }
+  }
 
   const showAsEmployer = true
   const showAsProvider = true

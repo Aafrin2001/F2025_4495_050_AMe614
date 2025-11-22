@@ -10,6 +10,7 @@ import AIChatScreen from './screens/AIChatScreen'
 import VoiceChatScreen from './screens/VoiceChatScreen'
 import ChatSelectionScreen from './screens/ChatSelectionScreen'
 import SettingsScreen from './screens/SettingsScreen'
+import CaregiverDashboardScreen from './screens/CaregiverDashboardScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 
@@ -269,11 +270,23 @@ function App() {
 
   if (currentScreen === 'caregiverDashboard') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleLogout}>Logout</button>
-        <h1>Caregiver Dashboard</h1>
-        <p>Caregiver dashboard screen coming soon...</p>
-      </div>
+      <CaregiverDashboardScreen
+        caregiver={user!}
+        seniorUserId={user?.seniorUserId}
+        onViewAlerts={() => setCurrentScreen('adminDashboard')}
+        onViewDashboard={() => setCurrentScreen('adminDashboard')}
+        onViewMedication={() => setCurrentScreen('medication')}
+        onViewMonitor={() => setCurrentScreen('healthMonitoring')}
+        onLogout={handleLogout}
+        onSettingsPress={() => setCurrentScreen('settings')}
+        onSeniorAdded={async (seniorEmail, seniorUserId) => {
+          if (user) {
+            user.seniorEmail = seniorEmail
+            user.seniorUserId = seniorUserId
+            setUser({ ...user })
+          }
+        }}
+      />
     )
   }
 

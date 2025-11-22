@@ -137,5 +137,35 @@ export class CaregiverService {
       return { success: false, error: error.message || 'Failed to get senior user ID' };
     }
   }
+
+  /**
+   * Get all caregiver relationships for a specific caregiver
+   * Returns all patients (approved, pending, rejected) assigned to the caregiver
+   */
+  static async getCaregiverRelationships(
+    caregiverId: string
+  ): Promise<{ 
+    success: boolean; 
+    data?: CaregiverRelationship[]; 
+    error?: string 
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('caregiver_relationships')
+        .select('*')
+        .eq('caregiver_id', caregiverId)
+        .order('requested_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching caregiver relationships:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
+    } catch (error: any) {
+      console.error('Error fetching caregiver relationships:', error);
+      return { success: false, error: error.message || 'Error fetching relationships' };
+    }
+  }
 }
 

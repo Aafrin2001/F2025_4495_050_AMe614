@@ -6,6 +6,9 @@ import MainScreen from './screens/MainScreen'
 import HealthMonitoringScreen from './screens/HealthMonitoringScreen'
 import ActivityScreen from './screens/ActivityScreen'
 import MedicationScreen from './screens/MedicationScreen'
+import AIChatScreen from './screens/AIChatScreen'
+import VoiceChatScreen from './screens/VoiceChatScreen'
+import ChatSelectionScreen from './screens/ChatSelectionScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 
@@ -285,32 +288,20 @@ function App() {
 
   if (currentScreen === 'chatSelection') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Chat Selection</h1>
-        <p>Chat selection screen coming soon...</p>
-      </div>
+      <ChatSelectionScreen
+        onBack={handleBackToMain}
+        onTextChat={() => setCurrentScreen('aiChat')}
+        onVoiceChat={() => setCurrentScreen('voiceChat')}
+      />
     )
   }
 
   if (currentScreen === 'aiChat') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={() => setCurrentScreen('chatSelection')}>Back</button>
-        <h1>AI Chat</h1>
-        <p>AI chat screen coming soon...</p>
-      </div>
-    )
+    return <AIChatScreen onBack={() => setCurrentScreen('chatSelection')} user={user} />;
   }
 
   if (currentScreen === 'voiceChat') {
-    return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={() => setCurrentScreen('chatSelection')}>Back</button>
-        <h1>Voice Chat</h1>
-        <p>Voice chat screen coming soon...</p>
-      </div>
-    )
+    return <VoiceChatScreen onBack={() => setCurrentScreen('chatSelection')} user={user} />;
   }
 
   return <HomePage onSignIn={() => setCurrentScreen('login')} onStartTrial={() => setCurrentScreen('login')} />

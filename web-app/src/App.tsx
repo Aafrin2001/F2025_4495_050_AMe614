@@ -9,6 +9,7 @@ import MedicationScreen from './screens/MedicationScreen'
 import AIChatScreen from './screens/AIChatScreen'
 import VoiceChatScreen from './screens/VoiceChatScreen'
 import ChatSelectionScreen from './screens/ChatSelectionScreen'
+import SettingsScreen from './screens/SettingsScreen'
 import { auth } from './lib/supabase'
 import { CaregiverService } from './lib/caregiverService'
 
@@ -248,11 +249,11 @@ function App() {
 
   if (currentScreen === 'settings') {
     return (
-      <div style={{ padding: '20px' }}>
-        <button onClick={handleBackToMain}>Back</button>
-        <h1>Settings</h1>
-        <p>Settings screen coming soon...</p>
-      </div>
+      <SettingsScreen
+        onBack={handleBackToMain}
+        user={user}
+        onLogout={handleLogout}
+      />
     )
   }
 

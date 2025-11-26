@@ -577,7 +577,7 @@
   .vital-card {
     flex-direction: column;
     text-align: center;
-    gap: 1rem;
+    gap: 2rem;
   }
 
   .vital-icon {

@@ -1,0 +1,417 @@
+CODE EXPLANATIONS - HEALTH COMPANION PROJECT
+==============================================
+
+This document provides detailed explanations of key code implementations in the Health Companion project, organized by feature area.
+
+================================================================================
+MEDICATION MANAGEMENT
+================================================================================
+
+File: MedicationScreen.tsx
+
+Lines 163-248: Medication Creation and Validation
+--------------------------------------------------
+The handleAddMedication function handles both creating new medications and editing existing ones. 
+- Lines 165-188: Form validation checks that required fields (name, dosage, type, frequency) are filled
+- Lines 197-205: Medication data is prepared for saving, with times and refill_date handled separately
+- Lines 208-224: For editing, existing times and refill_date are preserved
+- Lines 224-243: For new medications, the medication is created first, then a schedule setup modal is shown for daily medications
+- Line 226: MedicationService.saveMedication is called to persist the data to Supabase
+
+Lines 904-921: Today's Schedule Display
+--------------------------------------
+Displays all medications scheduled for the current day in a horizontal scrollable view.
+- Line 905: Section title "Today's Schedule"
+- Lines 906-910: Empty state when no medications are scheduled
+- Lines 912-919: Horizontal ScrollView displaying schedule items using renderScheduleItem function
+
+Lines 1098-1141: Daily/PRN Medication Type Selector
+----------------------------------------------------
+Toggle selector allowing users to choose between daily scheduled medications and PRN (as-needed) medications.
+- Lines 1100-1140: Two TouchableOpacity buttons for "Daily" and "As Needed (PRN)"
+- Visual feedback shows selected state with different background colors
+- Line 1144-1153: Info box explaining that schedule will be set after medication creation
+
+Lines 726-885: Schedule Setup Modal (Full Screen)
+--------------------------------------------------
+After creating a daily medication, users are taken to a full-screen schedule setup view.
+- Lines 731-737: Header with back button and title
+- Lines 756-783: Start date picker using native date picker component
+- Lines 785-822: Optional refill date picker with clear button
+- Lines 824-861: Time slots management - users can add multiple daily times
+- Lines 863-876: Save and Skip buttons
+- This full-screen approach prevents modal nesting issues and allows native pickers to work properly
+
+Lines 414-492: Time Picker Implementation
+-----------------------------------------
+Custom time picker that displays all 24 hours with 15-minute intervals.
+- Lines 440-484: Generates time slots from 00:00 to 23:45 in 15-minute increments
+- Lines 454-472: Handles both adding new times and editing existing times
+- Line 479: Uses MedicationService.formatTime to display times in readable format
+
+Lines 521-609: Date Picker Implementation
+------------------------------------------
+Platform-specific date picker that works differently on iOS and Android.
+- Lines 533-544: Android uses native DateTimePicker directly
+- Lines 548-608: iOS shows picker in a modal with custom styling
+- Lines 570-582: Inline calendar display on iOS for better UX
+- Lines 585-601: Done button to confirm date selection
+
+File: MedicationService.ts
+
+Lines 8-37: Save Medication to Database
+---------------------------------------
+Persists medication data to Supabase medications table.
+- Line 10: Gets current authenticated user
+- Lines 16-25: Inserts medication with user_id and all medication fields
+- Lines 27-30: Error handling with user-friendly messages
+- Returns success status and created medication data
+
+Lines 70-100: Get User Medications
+-----------------------------------
+Retrieves all medications for a user, with support for caregivers viewing senior data.
+- Lines 73-84: Determines target user ID - uses provided userId (for caregivers) or authenticated user
+- Lines 90-94: Queries medications table filtered by user_id, ordered by creation date
+- Supports Row Level Security policies for data access control
+
+================================================================================
+HEALTH MONITORING
+================================================================================
+
+File: HealthMonitoringScreen.tsx
+
+Lines 172-193: Update Vital Signs with Latest Data
+--------------------------------------------------
+Loads the most recent health metric readings and updates the display.
+- Line 154: Calls healthMetricsService.getLatestMetrics to fetch data
+- Lines 173-192: Maps through vital signs and updates display values
+- Lines 178-182: Special handling for blood pressure (systolic/diastolic format)
+- Line 187: Formats and displays last updated date
+
+Lines 196-230: Vital Signs Grouping
+------------------------------------
+Organizes vital signs into logical groups for easier data entry.
+- Lines 204-229: Defines three groups: Cardiovascular (BP, Heart Rate), Metabolic (Weight, Blood Sugar), and General (Temperature, Oxygen)
+- Each group has an icon, color, and description
+- Groups allow users to record multiple related metrics at once
+
+Lines 344-367: Handle Group Press (Grouped Input)
+--------------------------------------------------
+When a user taps a vital signs group, initializes the input form for all metrics in that group.
+- Lines 347-365: Creates initial reading objects for each vital in the group
+- Lines 349-356: Special handling for blood pressure (systolic and diastolic values)
+- Lines 358-364: Standard single-value metrics
+- Line 366: Sets the groupReadings state with all initialized values
+
+Lines 375-401: Save Group Readings
+----------------------------------
+Saves all metrics in a group simultaneously to the database.
+- Line 382: Maps through all readings in the group
+- Line 383: Calls healthMetricsService.saveMetric for each reading
+- Lines 386-387: Uses Promise.all to save all metrics in parallel
+- Lines 389-395: Error handling - shows alert if any save fails
+- Line 394: Reloads latest metrics after successful save
+
+Lines 494-538: Render Vital Group Card
+--------------------------------------
+Displays a card for each vital signs group with all metrics shown.
+- Lines 497-502: Card styling with border color matching group theme
+- Lines 504-510: Header with group icon, name, and description
+- Lines 511-535: Lists all vitals in the group with their current values
+- Lines 522-531: Shows last updated date or "No data recorded" message
+- Line 536: Hint text encouraging users to tap for grouped input
+
+Lines 564-589: Blood Pressure Input Form
+----------------------------------------
+Special input form for blood pressure with separate fields for systolic and diastolic.
+- Lines 567-576: Systolic (top number) input field
+- Lines 577-587: Diastolic (bottom number) input field
+- Both use numeric keyboard type for better mobile UX
+
+================================================================================
+ACTIVITY TRACKING
+================================================================================
+
+File: ActivitiesScreen.tsx
+
+Lines 150-173: Handle Activity Press
+-----------------------------------
+Routes users to specific activity screens based on activity type.
+- Lines 155-172: Switch statement routes to different activity screens
+- Case '1': Morning Walk -> WalkingTrackerScreen
+- Case '2': Stretching -> StretchingScreen
+- Case '3': Deep Breathing -> BreathingScreen
+- Case '4': Sleep Cycle -> SleepCycleScreen
+- Default: Toggles completion for custom activities
+
+Lines 175-187: Activity Completion Handler
+------------------------------------------
+Marks activities as completed and awards points.
+- Lines 176-180: Updates activity state to toggle completed status
+- Lines 182-186: If activity was not completed before, adds points and shows success alert
+- Points are calculated based on activity duration (line 214)
+
+Lines 200-221: Add Custom Activity
+-----------------------------------
+Allows users to create their own custom activities.
+- Lines 201-204: Validates that name and duration are provided
+- Lines 206-215: Creates new activity object with unique ID, default icon, and calculated points
+- Line 217: Adds activity to the activities array
+- Line 220: Shows success alert
+
+Lines 251-284: Render Activity Card
+-----------------------------------
+Displays each activity in a card format with completion status.
+- Lines 252-259: Card with colored left border and completion styling
+- Lines 261-274: Activity header with icon, name, description, duration, and points
+- Lines 275-281: Completion status indicator (checkmark or empty circle)
+- Visual feedback shows completed activities with reduced opacity
+
+Lines 326-342: Today's Progress Summary
+---------------------------------------
+Shows statistics about daily activity completion.
+- Line 330: Count of completed activities
+- Line 334: Total points earned
+- Line 338: Total number of activities
+- Displayed in a summary card at the top of the screen
+
+Lines 372-450: Add Activity Modal
+---------------------------------
+Full-screen modal for adding custom activities.
+- Lines 394-403: Activity name input field
+- Lines 405-416: Optional description text area (multiline)
+- Lines 418-428: Duration input (numeric keyboard)
+- Lines 430-443: Cancel and Add buttons
+- Uses KeyboardAvoidingView for proper keyboard handling on iOS
+
+================================================================================
+CAREGIVER FUNCTIONALITY
+================================================================================
+
+File: CaregiverDashboardScreen.tsx
+
+Lines 80-163: Handle Add Senior (Request Access)
+------------------------------------------------
+Caregiver requests access to monitor a senior's account.
+- Lines 81-84: Validates that senior email is provided
+- Lines 89-94: Gets current authenticated caregiver user
+- Lines 97-101: Calls CaregiverService.requestAccess to create pending relationship
+- Lines 114-117: Verifies if relationship is already approved
+- Lines 119-135: If approved, immediately connects and shows success
+- Lines 137-152: If pending, shows verification code and instructions
+- Includes error handling for various failure scenarios
+
+Lines 298-359: Feature Cards Grid
+----------------------------------
+Displays main navigation cards for caregiver features.
+- Lines 301-313: Alerts card - shows critical health alerts
+- Lines 316-328: Dashboard card - comprehensive health overview
+- Lines 331-343: Medication card - view and manage medications
+- Lines 346-358: Monitor card - track vital signs
+- Only visible when caregiver has approved access (seniorUserId exists)
+- Each card navigates to the corresponding screen with senior's data
+
+Lines 260-289: Pending Access Display
+--------------------------------------
+Shows status when caregiver access is pending approval.
+- Lines 262-264: Pending icon and title
+- Lines 266-273: Message explaining that request is pending
+- Lines 275-287: "Add Senior" button if no senior is connected yet
+- Provides clear feedback about access status
+
+File: CaregiverService.ts
+
+Lines 22-79: Request Caregiver Access
+--------------------------------------
+Creates a pending relationship request between caregiver and senior.
+- Line 34: Generates 6-digit verification code (100000-999999)
+- Lines 37-48: Inserts new record into caregiver_relationships table with:
+  - caregiver_id and caregiver_email
+  - senior_email (normalized to lowercase)
+  - status: 'pending'
+  - verification_code
+  - requested_at timestamp
+- Lines 50-68: Error handling for table not found, duplicate requests, etc.
+- Returns relationship ID and verification code for senior approval
+
+Lines 84-120: Approve Caregiver Request
+----------------------------------------
+Senior approves a caregiver's access request.
+- Lines 90-95: Prepares update data with approved status and senior_id
+- Lines 98-110: Updates relationship record, optionally verifying code matches
+- Lines 112-119: Error handling for invalid requests or codes
+- Once approved, caregiver can access senior's health data
+
+Lines 122-182: Get Senior User ID
+----------------------------------
+Retrieves the senior's user ID for an approved caregiver relationship.
+- Lines 128-137: Queries caregiver_relationships table for approved relationship
+- Lines 139-150: If found, looks up senior user by email to get user ID
+- Lines 152-181: Returns senior_id, senior_email, and relationship status
+- Used throughout app to filter data queries for senior's information
+
+================================================================================
+ADMIN DASHBOARD & ALERTS
+================================================================================
+
+File: AdminDashboardScreen.tsx
+
+Lines 72-86: Load All Dashboard Data
+-------------------------------------
+Fetches all dashboard data in parallel for optimal performance.
+- Uses Promise.all to load 6 different data sets simultaneously:
+  1. Dashboard statistics (walk distance, sleep, medication adherence, etc.)
+  2. Health trends over time
+  3. Medication alerts (upcoming refills)
+  4. Emergency alerts (critical health issues)
+  5. Daily activities summary
+  6. Inactivity alerts
+- Lines 88-93: Updates state with fetched data
+- Handles errors gracefully without breaking the entire dashboard
+
+Lines 117-125: Get Severity Color
+---------------------------------
+Maps alert severity levels to color codes for visual indication.
+- 'Low': Green (#4CAF50) - informational
+- 'Medium': Orange (#FF9800) - caution
+- 'High': Red (#F44336) - urgent
+- 'Critical': Dark Red (#D32F2F) - immediate attention required
+- Used throughout alert displays for consistent visual hierarchy
+
+Lines 224-253: Render Emergency Alert Card
+------------------------------------------
+Displays critical health alerts in a clickable card format.
+- Lines 231-240: Header with icon, patient name, and severity badge
+- Line 242: Alert message describing the issue
+- Line 243: Timestamp showing when alert was generated
+- Lines 244-248: "RESOLVED" badge if alert has been addressed
+- Lines 249-251: "Tap for details" indicator
+- Card is clickable and opens detailed alert modal
+
+Lines 255-436: Render Alert Details Modal
+----------------------------------------
+Comprehensive modal showing detailed information about a critical alert.
+- Lines 262-330: getHealthMetricDetails function formats alert-specific information
+- Lines 266-281: Blood pressure alerts show systolic/diastolic, normal ranges, and recommendations
+- Lines 282-296: Heart rate alerts with bpm values and normal ranges
+- Lines 297-311: Temperature alerts with fever detection
+- Lines 312-326: Oxygen level alerts with critical low-oxygen warnings
+- Lines 362-422: Modal content displays:
+  - Alert information (patient, type, message, timestamp)
+  - Health metric details (current values, normal ranges, status)
+  - Actionable recommendations (4-5 specific steps)
+  - Additional notes if available
+  - Resolution status
+- Provides comprehensive context for caregivers to take appropriate action
+
+Lines 564-571: Summary Statistics Cards
+---------------------------------------
+Displays key health metrics in a grid layout.
+- Walk Distance: Total kilometers walked in timeframe
+- Sleep Duration: Average hours of sleep
+- Medication Adherence: Percentage of medications taken on time
+- Games Played: Cognitive activity engagement
+- Status: Active/Inactive indicator
+- Critical Alerts: Count of urgent health issues
+- Each card has an icon, large number, and descriptive label
+
+Lines 575-582: Critical Alerts Banner
+-------------------------------------
+Prominent banner displayed when critical alerts exist.
+- Red background with warning icon
+- Shows count of critical alerts requiring attention
+- Only displayed when stats.criticalAlerts > 0
+- Draws immediate attention to urgent health issues
+
+Lines 204-222: Render Medication Alert Card
+-------------------------------------------
+Shows upcoming medication refill reminders.
+- Displays medication name, patient name, and days until refill
+- Color-coded: Critical (red) if less than 3 days, Upcoming (orange) otherwise
+- Shows refill due date
+- Helps prevent medication gaps
+
+================================================================================
+AUTHENTICATION & SECURITY
+================================================================================
+
+File: App.tsx
+
+Lines 42-86: Initialize Authentication
+---------------------------------------
+Checks for existing user session on app startup.
+- Line 46: Gets current session from Supabase Auth
+- Lines 48-58: If session exists, converts Supabase user to our User type
+- Lines 60-66: For caregivers, loads relationship to get senior's user ID
+- Lines 70-74: Routes users to appropriate screen (caregiver dashboard or main screen)
+- Lines 75-78: If no session, routes to onboarding
+- Handles errors gracefully
+
+Lines 91-120: Auth State Change Listener
+----------------------------------------
+Listens for authentication events (login, logout, etc.).
+- Line 92: Subscribes to Supabase auth state changes
+- Lines 93-100: On SIGNED_IN event, creates User object and routes appropriately
+- Lines 101-108: On SIGNED_OUT event, clears user state and routes to onboarding
+- Lines 110-120: For caregivers, loads relationship data on sign-in
+- Ensures app state stays synchronized with authentication
+
+================================================================================
+UI/UX IMPLEMENTATIONS
+================================================================================
+
+File: ActivitiesScreen.tsx
+
+Lines 311-314: Gradient Background
+-----------------------------------
+Consistent gradient styling across the app.
+- Colors: ['#667eea', '#764ba2'] - purple to blue gradient
+- Creates calming, professional appearance
+- Used with LinearGradient component from expo-linear-gradient
+
+File: MedicationScreen.tsx
+
+Lines 1001-1029: Modal Form with Keyboard Handling
+--------------------------------------------------
+Proper keyboard avoidance for forms in modals.
+- Lines 1003-1006: KeyboardAvoidingView with platform-specific behavior
+- iOS uses 'padding', Android uses 'height'
+- Lines 1022-1025: ScrollView with keyboardShouldPersistTaps="handled"
+- Ensures form fields remain accessible when keyboard is open
+
+Lines 1238-1887: Comprehensive StyleSheet
+-----------------------------------------
+Extensive styling for all components in MedicationScreen.
+- Modal styles: overlay, content, header, buttons
+- Form styles: inputs, labels, selectors, date/time pickers
+- Card styles: medication cards, schedule items, stats
+- Responsive layouts with flexbox
+- Platform-specific styles for iOS and Android
+
+================================================================================
+SERVICE LAYER ARCHITECTURE
+================================================================================
+
+File: MedicationService.ts
+
+The service layer abstracts database operations from UI components.
+- All methods return { success: boolean, data?: T, error?: string }
+- Consistent error handling across all operations
+- Support for both authenticated users and caregivers (via userId parameter)
+- Uses Supabase client for all database interactions
+- Implements Row Level Security through Supabase policies
+
+File: CaregiverService.ts
+
+Manages all caregiver-senior relationship operations.
+- requestAccess: Creates pending relationship with verification code
+- approveRequest: Senior approves caregiver access
+- getSeniorUserId: Retrieves senior's ID for approved caregivers
+- verifyAccess: Checks if relationship exists and is approved
+- All operations include comprehensive error handling
+
+================================================================================
+END OF CODE EXPLANATIONS
+================================================================================
+
+

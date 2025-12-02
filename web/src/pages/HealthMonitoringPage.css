@@ -1,0 +1,99 @@
+.health-monitoring-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+  color: var(--text-primary);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.back-icon {
+  font-size: 1.2rem;
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-primary);
+  opacity: 0.8;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+/* Tablet */
+@media (max-width: 1200px) {
+  .health-monitoring-page {
+    padding: 15px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .health-monitoring-page {
+    padding: 15px;
+  }
+
+  .page-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .back-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .health-monitoring-page {
+    padding: 10px;
+  }
+
+  .page-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .empty-state {
+    padding: 1.5rem 1rem;
+  }
+}
+
